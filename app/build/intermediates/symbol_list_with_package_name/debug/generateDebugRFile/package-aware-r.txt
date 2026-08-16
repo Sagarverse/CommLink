@@ -1,0 +1,10 @@
+com.commvault.commlink
+color ic_launcher_background
+drawable commvault_logo
+drawable ic_launcher_foreground
+drawable sagar_profile
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+style Theme_CommLink
+xml file_paths

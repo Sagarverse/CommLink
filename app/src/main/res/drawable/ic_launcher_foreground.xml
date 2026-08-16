@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Commvault pink background -->
+    <path
+        android:fillColor="#FF4A6A"
+        android:pathData="M0,0h108v108h-108z"/>
+    <!-- White "C" mark -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M64,28 C47.431,28 34,41.431 34,58 L34,62 C34,78.569 47.431,92 64,92 L74,92 L74,78 L64,78 C55.163,78 48,70.837 48,62 L48,58 C48,49.163 55.163,42 64,42 L74,42 L74,28 Z"/>
+    <!-- Data flow lines -->
+    <path
+        android:fillColor="#0B2E44"
+        android:pathData="M58,52 L84,52 L84,46 L58,46 Z"/>
+    <path
+        android:fillColor="#0B2E44"
+        android:pathData="M58,64 L78,64 L78,58 L58,58 Z"/>
+    <path
+        android:fillColor="#0B2E44"
+        android:pathData="M58,76 L88,76 L88,70 L58,70 Z"/>
+</vector>
