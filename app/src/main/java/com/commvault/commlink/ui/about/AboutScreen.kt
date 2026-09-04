@@ -65,7 +65,7 @@ fun AboutScreen(
                     modifier = Modifier
                         .size(160.dp)
                         .clip(CircleShape)
-                        .border(4.dp, Brush.linearGradient(listOf(CommvaultNavy, CommvaultPink)), CircleShape)
+                        .border(4.dp, Brush.linearGradient(listOf(CommvaultNavy, LocalPrimaryColor.current)), CircleShape)
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.sagar_profile),
@@ -88,18 +88,18 @@ fun AboutScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Surface(
-                    color = CommvaultPink.copy(alpha = 0.1f),
+                    color = LocalPrimaryColor.current.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        Icon(Icons.Default.Work, contentDescription = null, tint = CommvaultPink, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Work, contentDescription = null, tint = LocalPrimaryColor.current, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Customer Success Engineer Apprentice",
-                            color = CommvaultPink,
+                            color = LocalPrimaryColor.current,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )

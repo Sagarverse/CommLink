@@ -27,7 +27,8 @@ class HidDeviceManager private constructor(private val context: Context) {
 
     private val bluetoothAdapter: BluetoothAdapter? = context.getSystemService(BluetoothManager::class.java)?.adapter
     private var hidDevice: BluetoothHidDevice? = null
-    private var connectedDevice: BluetoothDevice? = null
+    var connectedDevice: BluetoothDevice? = null
+        private set
     private var deviceRepository: com.commvault.commlink.domain.repository.DeviceRepository? = null
     
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -177,7 +178,7 @@ class HidDeviceManager private constructor(private val context: Context) {
         scope.launch {
             for (request in reportChannel) {
                 sendReportInternal(request.id, request.data)
-                delay(12) // Prevent flooding the Android Bluetooth stack
+                // Removed delay(12) to eliminate trackpad latency and prevent queue buildup on high refresh rate displays.
             }
         }
     }
@@ -359,6 +360,14 @@ class HidDeviceManager private constructor(private val context: Context) {
         reportChannel.trySend(ReportRequest(1, report))
     }
 
+    fun sendMediaKey(bits: Byte) {
+        if (connectionState.value !is ConnectionState.Connected) return
+        // Send key down
+        reportChannel.trySend(ReportRequest(4, byteArrayOf(bits)))
+        // Send key up immediately for media keys
+        reportChannel.trySend(ReportRequest(4, byteArrayOf(0)))
+    }
+
     fun sendKeyPress(keyCode: Byte, modifier: Byte = 0, useSticky: Boolean = true) {
         val effectiveModifier = if (modifier != 0.toByte()) {
             modifier or if (useSticky) currentModifiers else 0
@@ -421,6 +430,25 @@ class HidDeviceManager private constructor(private val context: Context) {
         }
     }
 
+    fun sendMouseReportWithResult(dx: Float, dy: Float, buttons: Int = 0, wheel: Int = 0): Boolean {
+        val device = connectedDevice ?: return false
+        if (bluetoothAdapter?.isEnabled != true) return false
+        val outX = dx.roundToInt().coerceIn(-127, 127)
+        val outY = dy.roundToInt().coerceIn(-127, 127)
+        val report = ByteArray(4).apply {
+            this[0] = buttons.toByte()
+            this[1] = outX.toByte()
+            this[2] = outY.toByte()
+            this[3] = wheel.coerceIn(-127, 127).toByte()
+        }
+        return try {
+            hidDevice?.sendReport(device, 3, report) ?: false
+        } catch (e: Exception) {
+            Log.e("HidDeviceManager", "sendMouseReportWithResult failed", e)
+            false
+        }
+    }
+
     fun sendText(text: String): kotlinx.coroutines.Job? {
         textPushJob?.cancel()
         _isPushPaused.value = false
@@ -435,7 +463,21 @@ class HidDeviceManager private constructor(private val context: Context) {
 
                     val model = com.commvault.commlink.domain.model.HidKeyCodes.getHidCode(char)
                     if (model.keyCode != 0.toByte() || model.modifier != 0.toByte()) {
-                        sendKeyPress(model.keyCode, model.modifier, useSticky = false)
+                        // 1. Send Key Press
+                        val pressReport = ByteArray(8).apply { 
+                            this[0] = model.modifier
+                            this[2] = model.keyCode 
+                        }
+                        reportChannel.trySend(ReportRequest(1, pressReport))
+                        
+                        // 2. Wait to ensure the OS registers the press
+                        delay(20)
+                        
+                        // 3. Send Key Release
+                        val releaseReport = ByteArray(8)
+                        reportChannel.trySend(ReportRequest(1, releaseReport))
+                        
+                        // 4. Wait before typing the next character
                         delay(typingDelay) 
                     }
                 }
@@ -455,6 +497,10 @@ class HidDeviceManager private constructor(private val context: Context) {
         _isPushPaused.value = false
         _isTextPushing.value = false
         reportChannel.trySend(ReportRequest(1, ByteArray(8)))
+    }
+    
+    fun toggleTextPushPause() {
+        _isPushPaused.value = !_isPushPaused.value
     }
 
     fun lockWindows() {
@@ -498,10 +544,14 @@ class HidDeviceManager private constructor(private val context: Context) {
         }
         
         val deadline = System.currentTimeMillis() + timeoutMs
+        var registrationAttempted = false
         while (System.currentTimeMillis() < deadline) {
             if (hidDevice != null) {
                 if (isAppRegistered) return
-                registerApp()
+                if (!registrationAttempted) {
+                    registerApp()
+                    registrationAttempted = true
+                }
             }
             delay(250)
         }
@@ -587,6 +637,27 @@ class HidDeviceManager private constructor(private val context: Context) {
             0x95.toByte(), 0x03.toByte(), //     Report Count (3)
             0x81.toByte(), 0x06.toByte(), //     Input (Data,Var,Rel)
             0xC0.toByte(),                //   End Collection
+            0xC0.toByte(),                // End Collection
+
+            // Consumer Control (Media Keys) (ID 4)
+            0x05.toByte(), 0x0C.toByte(), // Usage Page (Consumer)
+            0x09.toByte(), 0x01.toByte(), // Usage (Consumer Control)
+            0xA1.toByte(), 0x01.toByte(), // Collection (Application)
+            0x85.toByte(), 0x04.toByte(), //   Report ID (4)
+            0x15.toByte(), 0x00.toByte(), //   Logical Minimum (0)
+            0x25.toByte(), 0x01.toByte(), //   Logical Maximum (1)
+            0x75.toByte(), 0x01.toByte(), //   Report Size (1)
+            0x95.toByte(), 0x07.toByte(), //   Report Count (7)
+            0x09.toByte(), 0xB5.toByte(), //   Usage (Scan Next Track)
+            0x09.toByte(), 0xB6.toByte(), //   Usage (Scan Previous Track)
+            0x09.toByte(), 0xB7.toByte(), //   Usage (Stop)
+            0x09.toByte(), 0xCD.toByte(), //   Usage (Play/Pause)
+            0x09.toByte(), 0xE2.toByte(), //   Usage (Mute)
+            0x09.toByte(), 0xEA.toByte(), //   Usage (Volume Down)
+            0x09.toByte(), 0xE9.toByte(), //   Usage (Volume Up)
+            0x81.toByte(), 0x02.toByte(), //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+            0x95.toByte(), 0x01.toByte(), //   Report Count (1)
+            0x81.toByte(), 0x03.toByte(), //   Input (Const,Var,Abs) - Padding
             0xC0.toByte()                 // End Collection
         )
     }

@@ -143,7 +143,7 @@ fun ChatRoomScreen(
                     IconButton(
                         onClick = { launcher.launch("*/*") },
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Attach File", tint = CommvaultPink, modifier = Modifier.size(26.dp))
+                        Icon(Icons.Filled.Add, contentDescription = "Attach File", tint = LocalPrimaryColor.current, modifier = Modifier.size(26.dp))
                     }
                     
                     OutlinedTextField(
@@ -153,7 +153,7 @@ fun ChatRoomScreen(
                         placeholder = { Text("Type message...", color = TextTertiary) },
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -172,7 +172,7 @@ fun ChatRoomScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .background(
-                                Brush.linearGradient(GradientPinkPurple),
+                                Brush.linearGradient(listOf(LocalPrimaryColor.current, LocalPrimaryLight.current)),
                                 CircleShape
                             )
                     ) {
@@ -206,7 +206,7 @@ fun MessageBubble(msg: ChatMessage) {
     }
     
     val isMe = msg.isFromMe
-    val bubbleColor = if (isMe) CommvaultPink else LightSurface
+    val bubbleColor = if (isMe) LocalPrimaryColor.current else LightSurface
     val textColor = if (isMe) Color.White else TextPrimary
 
     AnimatedVisibility(
@@ -247,12 +247,12 @@ fun MessageBubble(msg: ChatMessage) {
                                     modifier = Modifier
                                         .size(36.dp)
                                         .background(
-                                            if (isMe) Color.White.copy(alpha = 0.2f) else CommvaultPink.copy(alpha = 0.1f),
+                                            if (isMe) Color.White.copy(alpha = 0.2f) else LocalPrimaryColor.current.copy(alpha = 0.1f),
                                             RoundedCornerShape(8.dp)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Description, contentDescription = "File", tint = if (isMe) Color.White else CommvaultPink, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Description, contentDescription = "File", tint = if (isMe) Color.White else LocalPrimaryColor.current, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {

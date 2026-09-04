@@ -81,7 +81,7 @@ fun AssignedWorksScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showDialog = true },
-                containerColor = CommvaultPink,
+                containerColor = LocalPrimaryColor.current,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Assign Work")
@@ -131,7 +131,7 @@ fun AssignedWorkCard(
 ) {
     val priorityColor = when (work.priority) {
         WorkPriority.CRITICAL -> ErrorRed
-        WorkPriority.HIGH -> CommvaultPink
+        WorkPriority.HIGH -> LocalPrimaryColor.current
         WorkPriority.MEDIUM -> CommvaultNavy
         WorkPriority.LOW -> TextTertiary
     }
@@ -310,7 +310,7 @@ fun CreateAssignmentDialog(
         confirmButton = {
             Button(
                 onClick = { if (title.isNotBlank() && assignee.isNotBlank()) onSubmit(title, desc, priority, date, assignee) },
-                colors = ButtonDefaults.buttonColors(containerColor = CommvaultPink),
+                colors = ButtonDefaults.buttonColors(containerColor = LocalPrimaryColor.current),
                 shape = RoundedCornerShape(12.dp)
             ) { Text("Assign", color = Color.White) }
         },

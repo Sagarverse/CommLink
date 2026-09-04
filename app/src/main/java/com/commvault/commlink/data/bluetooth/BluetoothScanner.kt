@@ -164,9 +164,20 @@ class BluetoothScanner(private val context: Context) {
         }
 
         if (!adapter.isEnabled) return
+        
+        // Immediately add bonded devices so they always appear in the list
+        try {
+            val bonded = adapter.bondedDevices
+            if (!bonded.isNullOrEmpty()) {
+                _scannedDevices.value = _scannedDevices.value + bonded
+            }
+        } catch (e: Exception) {}
 
         // Classic Discovery
         try {
+            if (adapter.isDiscovering) {
+                adapter.cancelDiscovery()
+            }
             val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
             context.registerReceiver(classicReceiver, filter)
             adapter.startDiscovery()

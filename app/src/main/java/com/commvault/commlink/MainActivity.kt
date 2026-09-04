@@ -17,6 +17,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -68,10 +71,16 @@ import com.commvault.commlink.ui.about.AboutScreen
 import com.commvault.commlink.ui.assigned.AssignedWorksScreen
 import com.commvault.commlink.ui.chat.ChatScreen
 import com.commvault.commlink.ui.chat.ChatRoomScreen
+
+import com.commvault.commlink.ui.todo.TodoScreen
+
+
 import com.commvault.commlink.ui.todo.TodoScreen
 import com.commvault.commlink.ui.help.HelpScreen
 import com.commvault.commlink.ui.components.BiometricLockOverlay
 import com.commvault.commlink.ui.theme.CommLinkTheme
+import com.commvault.commlink.data.updater.AutoUpdater
+
 import com.commvault.commlink.updater.GithubUpdater
 import androidx.lifecycle.lifecycleScope
 
@@ -102,7 +111,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         }
 
         setContent {
-            CommLinkTheme {
+            CommLinkTheme(themeColorHex = viewModel.themeColorHex) {
                 val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
                 var isUnlocked by remember { mutableStateOf(!isBiometricEnabled) }
 
@@ -157,6 +166,11 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             Log.e("MainActivity", "Failed to start HidService", e)
         }
     }
+
+    override fun onDestroy() {
+        viewModel.restoreOriginalMac()
+        super.onDestroy()
+    }
 }
 
 @Composable
@@ -189,6 +203,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
 
     var showBatteryOptimizationDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val autoUpdater = remember { AutoUpdater(context) }
 
     LaunchedEffect(Unit) {
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -211,7 +226,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                         }
                         context.startActivity(intent)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = com.commvault.commlink.ui.theme.CommvaultPink)
+                    colors = ButtonDefaults.buttonColors(containerColor = com.commvault.commlink.ui.theme.LocalPrimaryColor.current)
                 ) {
                     Text("Allow", color = androidx.compose.ui.graphics.Color.White)
                 }
@@ -229,216 +244,225 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
         gesturesEnabled = isLoggedIn,
         drawerContent = {
             if (isLoggedIn) {
+                val drawerPrimary = com.commvault.commlink.ui.theme.LocalPrimaryColor.current
+                val drawerPrimaryDark = com.commvault.commlink.ui.theme.LocalPrimaryDark.current
+                val drawerPrimaryLight = com.commvault.commlink.ui.theme.LocalPrimaryLight.current
+                val userEmail by viewModel.email.collectAsState()
+                val drawerItemColors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = drawerPrimary.copy(alpha = 0.1f),
+                    selectedIconColor = drawerPrimary,
+                    selectedTextColor = drawerPrimary,
+                    unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
+                    unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
+                )
+                
+                @Composable
+                fun DrawerSectionHeader(title: String) {
+                    Text(
+                        text = title,
+                        color = com.commvault.commlink.ui.theme.TextTertiary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                        modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp)
+                    )
+                }
+                
                 ModalDrawerSheet(
                     drawerContainerColor = com.commvault.commlink.ui.theme.LightBg,
-                    modifier = Modifier.width(280.dp)
+                    modifier = Modifier.width(300.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                Brush.verticalGradient(
+                                Brush.linearGradient(
                                     colors = listOf(
-                                        com.commvault.commlink.ui.theme.CommvaultPurple,
-                                        com.commvault.commlink.ui.theme.CommvaultPinkDark
+                                        drawerPrimaryLight,
+                                        drawerPrimaryDark
                                     )
                                 )
                             )
                             .padding(24.dp)
                     ) {
                         Column {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Image(
-                                painter = painterResource(id = R.drawable.commvault_logo),
-                                contentDescription = "Commvault Logo",
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Text(
-                                text = "CommLink",
-                                color = androidx.compose.ui.graphics.Color.White,
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 22.sp
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.commvault_logo),
+                                    contentDescription = "Commvault Logo",
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                        .background(androidx.compose.ui.graphics.Color.White)
+                                        .padding(4.dp)
                                 )
-                            )
-                            Text(
-                                text = "Enterprise Apprentice Hub",
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f),
-                                fontSize = 12.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "CommLink",
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 20.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "Enterprise Hub",
+                                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.2f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = userEmail.ifEmpty { "Connected User" },
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
-                        label = { Text("Dashboard") },
-                        selected = currentRoute == "dashboard",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = true } }
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Chat, contentDescription = null) },
-                        label = { Text("Local Chat") },
-                        selected = currentRoute == "chat",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("chat")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
-                        label = { Text("Assigned Works") },
-                        selected = currentRoute == "assigned_works",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("assigned_works")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
-                        label = { Text("To-Do List") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("todo")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.HelpCenter, contentDescription = null) },
-                        label = { Text("Help Ping") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("help")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        label = { Text("Automation Hub") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("automation")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.SettingsApplications, contentDescription = null) },
-                        label = { Text("Settings") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("settings")
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        label = { Text("About Developer") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("about")
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Alarms") },
-                        selected = currentRoute == "alarms",
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate("alarms")
-                        },
-                        icon = { Icon(Icons.Default.Notifications, contentDescription = "Alarms") },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
                     
-                    Spacer(modifier = Modifier.weight(1f))
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        DrawerSectionHeader("MAIN")
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
+                            label = { Text("Dashboard", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "dashboard",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("dashboard") { popUpTo("dashboard") { inclusive = true } }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Chat, contentDescription = null) },
+                            label = { Text("CommDrop", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "chat",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("chat") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        
+                        DrawerSectionHeader("WORK")
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
+                            label = { Text("Assigned Works", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "assigned_works",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("assigned_works") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
+                            label = { Text("To-Do List", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "todo",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("todo") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        
+                        DrawerSectionHeader("TOOLS")
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                            label = { Text("Automation Hub", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "automation",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("automation") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Notifications, contentDescription = "Alarms") },
+                            label = { Text("Alarms", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "alarms",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("alarms") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        
+                        DrawerSectionHeader("SUPPORT & SETTINGS")
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.HelpCenter, contentDescription = null) },
+                            label = { Text("Help Ping", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "help",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("help") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            label = { Text("About Developer", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "about",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("about") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.SettingsApplications, contentDescription = null) },
+                            label = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "settings",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("settings") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                    
+                    Divider(color = com.commvault.commlink.ui.theme.BorderLight)
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Default.Logout, contentDescription = null) },
-                        label = { Text("Log Out") },
+                        label = { Text("Log Out", fontWeight = FontWeight.Bold) },
                         selected = false,
                         onClick = {
                             scope.launch { drawerState.close() }
                             viewModel.logout()
                         },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = com.commvault.commlink.ui.theme.CommvaultPink.copy(alpha = 0.1f),
-                            selectedIconColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            selectedTextColor = com.commvault.commlink.ui.theme.CommvaultPink,
-                            unselectedIconColor = com.commvault.commlink.ui.theme.TextTertiary,
-                            unselectedTextColor = com.commvault.commlink.ui.theme.TextPrimary
-                        ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        colors = drawerItemColors,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -467,25 +491,34 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                 viewModel = viewModel,
                 onOpenDrawer = { scope.launch { drawerState.open() } },
                 onNavigateToPairing = {
-                    navController.navigate("pairing")
+                    navController.navigate("pairing") { popUpTo("dashboard") }
                 },
                 onNavigateToKeyboard = {
-                    navController.navigate("keyboard")
+                    navController.navigate("keyboard") { popUpTo("dashboard") }
                 },
                 onNavigateToSnippets = {
-                    navController.navigate("snippets")
+                    navController.navigate("snippets") { popUpTo("dashboard") }
                 },
                 onNavigateToAutomation = {
-                    navController.navigate("automation")
+                    navController.navigate("automation") { popUpTo("dashboard") }
                 },
                 onNavigateToPresenter = {
-                    navController.navigate("presenter")
+                    navController.navigate("presenter") { popUpTo("dashboard") }
                 },
                 onNavigateToPasswordManager = {
-                    navController.navigate("password_manager")
+                    navController.navigate("password_manager") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
                 },
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate("settings") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToChat = {
+                    navController.navigate("chat") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToTodo = {
+                    navController.navigate("todo") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onCheckUpdates = {
+                    autoUpdater.checkForUpdatesAndDownload()
                 }
             )
         }
@@ -509,8 +542,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
         composable("keyboard") {
             KeyboardScreen(
                 viewModel = viewModel,
-                onDisconnect = {
-                    viewModel.disconnect()
+                onBack = {
                     if (navController.previousBackStackEntry != null) {
                         navController.popBackStack()
                     }
@@ -620,6 +652,13 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
             ChatScreen(
                 viewModel = viewModel,
                 onNavigateToRoom = { peer -> navController.navigate("chatroom/$peer") },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("todo") {
+            TodoScreen(
+                viewModel = viewModel,
                 onBack = { navController.popBackStack() }
             )
         }

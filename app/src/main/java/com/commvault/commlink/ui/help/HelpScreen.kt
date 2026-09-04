@@ -47,14 +47,14 @@ import kotlinx.coroutines.delay
 data class TeamMember(val name: String, val role: String, val phone: String)
 
 val mockTeam = listOf(
-    TeamMember("HIMATHI", "Customer Success Apprentice", "+916302240664"),
-    TeamMember("KARAN", "Customer Success Apprentice", "+919691100746"),
-    TeamMember("MANOJ", "Customer Success Apprentice", "+916364205955"),
-    TeamMember("MONIKA", "Customer Success Apprentice", "+919980297370"),
-    TeamMember("NEHA", "Customer Success Apprentice", "+919846550843"),
-    TeamMember("SAGAR", "Customer Success Apprentice", "+919019989269"),
-    TeamMember("YASH", "Customer Success Apprentice", "+917899538612"),
-    TeamMember("SUYOG", "Manager", "+918745018688")
+    TeamMember("SUYOG", "Manager", "+918745018688"),
+    TeamMember("HIMATHI", "CSM", "+916302240664"),
+    TeamMember("KARAN", "CSM", "+919691100746"),
+    TeamMember("MANOJ", "CSM", "+916364205955"),
+    TeamMember("MONIKA", "CSM", "+919980297370"),
+    TeamMember("NEHA", "CSM", "+919846550843"),
+    TeamMember("SAGAR", "CSM", "+919019989269"),
+    TeamMember("YASH", "CSM", "+917899538612")
 )
 
 // Color for each member avatar
@@ -153,7 +153,7 @@ fun HelpScreen(
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Groups, contentDescription = null, tint = CommvaultPink, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Groups, contentDescription = null, tint = LocalPrimaryColor.current, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("Team Directory", color = CommvaultNavy, fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -185,7 +185,7 @@ fun HelpScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = CommvaultPinkSoft.copy(alpha = 0.5f),
+                    color = LocalPrimarySoft.current.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 ) {
                     Text(
@@ -291,11 +291,11 @@ fun MemberCard(
             Spacer(modifier = Modifier.height(2.dp))
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = if (member.role == "Manager") CommvaultPinkSoft else LightSurfaceAlt
+                color = if (member.role == "Manager") LocalPrimarySoft.current else LightSurfaceAlt
             ) {
                 Text(
                     text = if (member.role == "Manager") "★ MANAGER" else member.role.uppercase().take(12),
-                    color = if (member.role == "Manager") CommvaultPink else TextTertiary,
+                    color = if (member.role == "Manager") LocalPrimaryColor.current else TextTertiary,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,

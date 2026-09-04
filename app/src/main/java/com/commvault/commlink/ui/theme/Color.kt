@@ -2,47 +2,48 @@ package com.commvault.commlink.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Commvault Official Brand ────────────────────────────────────────────
-val CommvaultNavy      = Color(0xFF0B2E44)   // Deep navy – used for text / headers
-val CommvaultPink      = Color(0xFFFF4A6A)   // Signature vibrant pink accent
-val CommvaultPinkDark  = Color(0xFFD63B56)   // Darker pink for pressed states
-val CommvaultPinkSoft  = Color(0xFFFFE0E6)   // Soft blush for subtle backgrounds
-val CommvaultPurple    = Color(0xFF8E24AA)   // Vibrant purple for gradients
-val CommvaultPurpleLight = Color(0xFFCE93D8) // Light purple for secondary accents
+// ── Ceramic Emerald Brand ───────────────────────────────────────────────
+val PrimaryEmerald     = Color(0xFF039855)   // Main vibrant green
+val SecondaryDark      = Color(0xFF0F172A)   // High contrast navy/black for text
+val TertiaryMint       = Color(0xFF10B981)   // Lighter mint for secondary elements
+val NeutralSlate       = Color(0xFF64748B)   // Neutral gray/slate for descriptions
 
 // ── Light‑Mode Surface Palette ──────────────────────────────────────────
-val LightBg            = Color(0xFFF5F6FA)   // Page‑level background (warm off‑white)
-val LightSurface       = Color(0xFFFFFFFF)   // Card / panel surface
-val LightSurfaceAlt    = Color(0xFFF0F2F5)   // Alternate surface (section headers)
-val BorderColor        = Color(0xFFE2E8F0)   // Subtle card borders (warmer)
-
-// ── Glassmorphism ───────────────────────────────────────────────────────
-val GlassWhite         = Color(0x33FFFFFF)   // 20% white for glass panels
-val GlassBorder        = Color(0x55FFFFFF)   // 33% white for glass borders
-
-// ── Text Hierarchy ──────────────────────────────────────────────────────
-val TextPrimary        = Color(0xFF0B2E44)   // Headings & body text (navy)
-val TextSecondary      = Color(0xFF4A6A7D)   // Descriptions / secondary info
-val TextTertiary       = Color(0xFF8DA4B5)   // Hints, labels, disabled text
+val PageBackground     = Color(0xFFF9FAFB)   // Soft off-white page background
+val CardSurface        = Color(0xFFFFFFFF)   // Pure white for floating cards
+val CardSurfaceAlt     = Color(0xFFF1F5F9)   // Alternate surface (section headers)
+val BorderLight        = Color(0xFFF1F5F9)   // Very subtle border for cards
 
 // ── Semantic Colors ─────────────────────────────────────────────────────
-val SuccessTeal        = Color(0xFF00C49A)   // Connected / success states
-val SuccessTealLight   = Color(0xFFE0F7F1)   // Success background tint
-val ErrorRed           = Color(0xFFFF5252)   // Error banners
-val WarningAmber       = Color(0xFFFFB74D)   // Warning states
-val InfoBlue           = Color(0xFF42A5F5)   // Info accents
+val SuccessTeal        = Color(0xFF00C49A)
+val ErrorRed           = Color(0xFFEF4444)
+val WarningAmber       = Color(0xFFF59E0B)
+val InfoBlue           = Color(0xFF3B82F6)
 
-// ── Premium Gradients (reusable brush definitions) ──────────────────────
-val GradientPinkPurple = listOf(CommvaultPink, CommvaultPurple)
-val GradientNavyDeep   = listOf(Color(0xFF0B2E44), Color(0xFF1A3F5C))
-val GradientTealMint   = listOf(Color(0xFF00C49A), Color(0xFF00E5B0))
-val GradientSunrise    = listOf(Color(0xFFFF6B6B), Color(0xFFFFD93D))
+// ── Gradients ───────────────────────────────────────────────────────────
+val GradientBrandGreen = listOf(PrimaryEmerald, TertiaryMint)
+val GradientNavyDeep   = listOf(SecondaryDark, Color(0xFF1E293B))
 
-// ── Keyboard & Specific Components ──────────────────────────────────────
-val KeyBackground      = Color(0xFFEBEFF3)   // Key cap background (light)
-val KeyPressed         = Color(0xFFD6DCE3)   // Key cap pressed state
+// ── Legacy aliases for compatibility ────────────────────────────────────
+val BrandGreen         = PrimaryEmerald
+val BrandMint          = TertiaryMint
+val LightBg            = PageBackground
+val LightSurface       = CardSurface
+val LightSurfaceAlt    = CardSurfaceAlt
+val BorderColor        = BorderLight
+val TextPrimary        = SecondaryDark
+val TextSecondary      = NeutralSlate
+val TextTertiary       = Color(0xFF94A3B8)
+val BrandGreenDark     = Color(0xFF027A48)
+val BrandGreenSoft     = Color(0xFFD1FADF)
+val BrandMintLight     = Color(0xFFA7F3D0)
+val GlassWhite         = Color(0x33FFFFFF)
+val GlassBorder        = Color(0x55FFFFFF)
+val KeyBackground      = Color(0xFFEBEFF3)
+val KeyPressed         = Color(0xFFD6DCE3)
 
-// ── Legacy aliases (mapped to new light values so existing screens compile) ─
-val NavyBg             = LightBg
-val NavySurface        = LightSurface
-val NavySurfaceLight   = LightSurfaceAlt
+val CommvaultNavy = SecondaryDark
+val GradientTealMint = listOf(PrimaryEmerald, TertiaryMint)
+val SuccessTealLight = Color(0xFFE6FFF7)
+val GradientSunrise = listOf(WarningAmber, ErrorRed)
+

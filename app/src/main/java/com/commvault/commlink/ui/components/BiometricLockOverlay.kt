@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.commvault.commlink.ui.theme.CommvaultNavy
-import com.commvault.commlink.ui.theme.CommvaultPink
+import com.commvault.commlink.ui.theme.LocalPrimaryColor
 import com.commvault.commlink.ui.theme.LightBg
 
 @Composable
@@ -49,7 +49,7 @@ fun BiometricLockOverlay(
             Icon(
                 imageVector = Icons.Default.Fingerprint,
                 contentDescription = "Fingerprint",
-                tint = CommvaultPink,
+                tint = LocalPrimaryColor.current,
                 modifier = Modifier.size(80.dp)
             )
             Spacer(modifier = Modifier.height(24.dp))

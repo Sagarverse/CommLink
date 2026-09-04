@@ -143,7 +143,7 @@ fun PresentationRemoteScreen(
                                 .height(120.dp),
                             title = "NEXT SLIDE",
                             icon = Icons.AutoMirrored.Filled.NavigateNext,
-                            accentColor = CommvaultPink,
+                            accentColor = LocalPrimaryColor.current,
                             enabled = isConnected,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -222,14 +222,14 @@ fun PresenterLargeButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (accentColor == CommvaultPink && enabled) Color.White
+                tint = if (accentColor == LocalPrimaryColor.current && enabled) Color.White
                        else if (enabled) TextPrimary else TextTertiary,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = title,
-                color = if (accentColor == CommvaultPink && enabled) Color.White
+                color = if (accentColor == LocalPrimaryColor.current && enabled) Color.White
                        else if (enabled) TextPrimary else TextTertiary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,

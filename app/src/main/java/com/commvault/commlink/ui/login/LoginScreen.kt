@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.commvault.commlink.R
 import com.commvault.commlink.ui.CommLinkViewModel
 import com.commvault.commlink.ui.theme.*
+import com.commvault.commlink.ui.components.CeramicCard
+import com.commvault.commlink.ui.components.EmeraldButton
 import kotlinx.coroutines.delay
 
 @Composable
@@ -77,7 +79,7 @@ fun LoginScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(LightBg, CommvaultPinkSoft.copy(alpha = 0.3f)),
+                    colors = listOf(LightBg, LocalPrimarySoft.current.copy(alpha = 0.3f)),
                     startY = 0f,
                     endY = Float.POSITIVE_INFINITY
                 )
@@ -137,13 +139,8 @@ fun LoginScreen(
                     )
                 )
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    color = LightSurface,
-                    shape = MaterialTheme.shapes.large,
-                    shadowElevation = 8.dp,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+                CeramicCard(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -167,10 +164,10 @@ fun LoginScreen(
                                 errorMessage = null
                             },
                             label = { Text("Commvault Email", color = TextTertiary) },
-                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = CommvaultPink) },
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = LocalPrimaryColor.current) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = CommvaultPink,
+                                focusedBorderColor = LocalPrimaryColor.current,
                                 unfocusedBorderColor = BorderColor,
                                 focusedTextColor = TextPrimary,
                                 unfocusedTextColor = TextPrimary
@@ -191,7 +188,7 @@ fun LoginScreen(
                                 errorMessage = null
                             },
                             label = { Text("Password", color = TextTertiary) },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = CommvaultPink) },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = LocalPrimaryColor.current) },
                             trailingIcon = {
                                 val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -201,7 +198,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = CommvaultPink,
+                                focusedBorderColor = LocalPrimaryColor.current,
                                 unfocusedBorderColor = BorderColor,
                                 focusedTextColor = TextPrimary,
                                 unfocusedTextColor = TextPrimary
@@ -227,7 +224,8 @@ fun LoginScreen(
                         }
 
                         // ── Premium Gradient Login Button ──
-                        Button(
+                        EmeraldButton(
+                            text = "Login",
                             onClick = {
                                 if (email.isBlank() || password.isBlank()) {
                                     errorMessage = "Please fill in all fields"
@@ -241,31 +239,8 @@ fun LoginScreen(
                                         errorMessage = "Invalid credentials"
                                     }
                                 }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues(),
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.horizontalGradient(GradientPinkPurple),
-                                        MaterialTheme.shapes.medium
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Login",
-                                    color = Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
-                        }
+                        )
                     }
                 }
             }

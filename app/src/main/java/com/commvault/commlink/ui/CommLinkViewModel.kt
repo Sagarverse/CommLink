@@ -45,6 +45,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     val connectionState: StateFlow<HidDeviceManager.ConnectionState> = hidDeviceManager.connectionState
     val activeModifiers: StateFlow<Byte> = hidDeviceManager.activeModifiers
     val isTextPushing: StateFlow<Boolean> = hidDeviceManager.isTextPushing
+    val isPushPaused: StateFlow<Boolean> = hidDeviceManager.isPushPaused
 
     // Scanner flows
     val isScanning: StateFlow<Boolean> = bluetoothScanner.isScanning
@@ -106,6 +107,16 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     private val _isBiometricEnabled = MutableStateFlow(prefs.getBoolean("biometric_enabled", false))
     val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled.asStateFlow()
 
+    // Theme Color
+    private val _themeColorHex = MutableStateFlow(secureStorage.getThemeColor())
+    val themeColorHex: StateFlow<String> = _themeColorHex.asStateFlow()
+
+    fun setThemeColor(hex: String) {
+        _themeColorHex.value = hex
+        secureStorage.saveThemeColor(hex)
+    }
+
+
     // Assigned Works
     private val _assignedWorks = MutableStateFlow<List<AssignedWork>>(emptyList())
     val assignedWorks: StateFlow<List<AssignedWork>> = _assignedWorks.asStateFlow()
@@ -113,6 +124,10 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     // To-Do List
     private val _todos = MutableStateFlow<List<TodoItem>>(emptyList())
     val todos: StateFlow<List<TodoItem>> = _todos.asStateFlow()
+
+    // Alarms List
+    private val _alarmsList = MutableStateFlow<List<com.commvault.commlink.domain.model.AlarmItem>>(emptyList())
+    val alarmsList: StateFlow<List<com.commvault.commlink.domain.model.AlarmItem>> = _alarmsList.asStateFlow()
 
     // P2P Networking & Chat
     val discoveredPeers: StateFlow<List<DiscoveredPeer>> = networkManager.discoveredPeers
@@ -124,6 +139,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         hidDeviceManager.typingDelay = _typingSpeed.value
         loadMockAssignedWorks()
         loadChatMessages()
+        loadAlarms()
     }
 
     private fun loadMockAssignedWorks() {
@@ -140,16 +156,41 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     fun addTodo(title: String, description: String = "") {
         val newTodo = TodoItem(title = title, description = description)
         _todos.value = _todos.value + newTodo
+        saveTodos()
     }
 
     fun toggleTodo(todoId: String) {
         _todos.value = _todos.value.map {
             if (it.id == todoId) it.copy(isCompleted = !it.isCompleted) else it
         }
+        saveTodos()
     }
 
     fun deleteTodo(todoId: String) {
         _todos.value = _todos.value.filter { it.id != todoId }
+        saveTodos()
+    }
+
+    private fun loadTodos() {
+        try {
+            val json = secureStorage.getTodosJson()
+            if (json.isNotBlank() && json != "[]") {
+                val listType = object : com.google.gson.reflect.TypeToken<List<TodoItem>>() {}.type
+                val loadedList: List<TodoItem> = com.google.gson.Gson().fromJson(json, listType)
+                _todos.value = loadedList
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommLinkViewModel", "Error loading todos", e)
+        }
+    }
+
+    private fun saveTodos() {
+        try {
+            val json = com.google.gson.Gson().toJson(_todos.value)
+            secureStorage.saveTodosJson(json)
+        } catch (e: Exception) {
+            android.util.Log.e("CommLinkViewModel", "Error saving todos", e)
+        }
     }
 
     fun setAutoConnectEnabled(enabled: Boolean) {
@@ -192,6 +233,8 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     init {
         loadSnippets()
         loadPasswordEntries()
+        loadAlarms()
+        loadTodos()
         setupNetworkListener()
         if (_isLoggedIn.value) {
             attemptAutoConnect()
@@ -439,6 +482,8 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         stopKeepAlive()
+        restoreOriginalMac()
+        stopAutoLockMonitor()
         super.onCleared()
     }
 
@@ -491,6 +536,13 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         hidDeviceManager.sendKeyPress(keyCode, modifier)
     }
 
+    fun sendMediaPlayPause() = hidDeviceManager.sendMediaKey(0x08) // Bit 3
+    fun sendMediaNext() = hidDeviceManager.sendMediaKey(0x01) // Bit 0
+    fun sendMediaPrev() = hidDeviceManager.sendMediaKey(0x02) // Bit 1
+    fun sendMediaVolumeUp() = hidDeviceManager.sendMediaKey(0x40) // Bit 6
+    fun sendMediaVolumeDown() = hidDeviceManager.sendMediaKey(0x20) // Bit 5
+    fun sendMediaMute() = hidDeviceManager.sendMediaKey(0x10) // Bit 4
+
     fun toggleModifier(modifier: Byte) {
         val current = hidDeviceManager.activeModifiers.value
         val isSet = (current.toInt() and modifier.toInt()) != 0
@@ -499,6 +551,14 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
 
     fun sendText(text: String) {
         hidDeviceManager.sendText(text)
+    }
+    
+    fun stopTextPush() {
+        hidDeviceManager.stopTextPush()
+    }
+    
+    fun toggleTextPushPause() {
+        hidDeviceManager.toggleTextPushPause()
     }
 
     fun sendMouseMove(dx: Float, dy: Float, buttons: Int = 0, wheel: Int = 0) {
@@ -516,10 +576,10 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         hidDeviceManager.lockWindows()
     }
 
-    fun unlockWindows() {
+    fun unlockWindows(wakeScreenFirst: Boolean = true) {
         val password = secureStorage.getCommvaultPassword() ?: ""
         if (password.isNotEmpty()) {
-            hidDeviceManager.unlockWindows(password)
+            hidDeviceManager.unlockWindows(password, wakeScreenFirst)
         }
     }
 
@@ -936,79 +996,535 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     private var escalatingAlarmJob: Job? = null
     private var alarmMediaPlayer: android.media.MediaPlayer? = null
 
-    fun startIntervalAlarm(title: String, intervalSeconds: Long, repeatCount: Int, context: Context) {
-        stopAlarms()
-        intervalAlarmJob = viewModelScope.launch(Dispatchers.IO) {
-            var count = 0
-            while (isActive && count < repeatCount) {
-                delay(intervalSeconds * 1000)
-                if (!isActive) break
-                
-                try {
-                    val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-                    val r = android.media.RingtoneManager.getRingtone(context, uri)
-                    r.play()
-                } catch (e: Exception) {
-                    Log.e("CommLinkViewModel", "Error playing notification sound", e)
-                }
-                
-                viewModelScope.launch(Dispatchers.Main) {
-                    android.widget.Toast.makeText(context, "Alarm Triggered: $title", android.widget.Toast.LENGTH_LONG).show()
-                }
-                count++
-            }
-        }
-    }
-
-    fun startEscalatingAlarm(maxVolume: Int, context: Context) {
-        stopAlarms()
-        escalatingAlarmJob = viewModelScope.launch(Dispatchers.IO) {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            val maxSystemVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
-            val targetVolume = ((maxVolume / 10f) * maxSystemVolume).toInt().coerceIn(0, maxSystemVolume)
-
-            audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM, 0, 0)
-
-            try {
-                var uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-                if (uri == null) {
-                    uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
-                }
-                
-                alarmMediaPlayer = android.media.MediaPlayer().apply {
-                    setDataSource(context, uri)
-                    setAudioAttributes(
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build()
-                    )
-                    isLooping = true
-                    prepare()
-                    start()
-                }
-            } catch (e: Exception) {
-                Log.e("CommLinkViewModel", "Error playing alarm sound", e)
-            }
-
-            var currentVol = 0
-            while (isActive && currentVol < targetVolume) {
-                delay(3000) // increase volume every 3 seconds
-                if (!isActive) break
-                currentVol++
-                audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM, currentVol, 0)
-            }
-        }
-    }
-
     fun stopAlarms() {
         intervalAlarmJob?.cancel()
         escalatingAlarmJob?.cancel()
-        try {
-            alarmMediaPlayer?.stop()
-            alarmMediaPlayer?.release()
-        } catch (e: Exception) {}
+        alarmMediaPlayer?.stop()
+        alarmMediaPlayer?.release()
         alarmMediaPlayer = null
+        
+        // Stop any background scheduled alarm sounds
+        com.commvault.commlink.receiver.AlarmSoundPlayer.stop()
+        try {
+            val notificationManager = com.commvault.commlink.CommLinkApp.instance.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            notificationManager.cancel(1001)
+        } catch(e: Exception) {}
+    }
+
+    fun scheduleExactAlarm(
+        timeInMillis: Long, 
+        title: String, 
+        message: String, 
+        alarmType: String,
+        maxVolume: Int,
+        intervalSecs: Int,
+        repeatCount: Int,
+        context: Context
+    ) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = android.content.Intent(context, com.commvault.commlink.receiver.AlarmReceiver::class.java).apply {
+            putExtra("ALARM_TITLE", title)
+            putExtra("ALARM_MESSAGE", message)
+            putExtra("ALARM_TYPE", alarmType)
+            putExtra("MAX_VOLUME", maxVolume)
+            putExtra("INTERVAL_SECS", intervalSecs)
+            putExtra("REPEAT_COUNT", repeatCount)
+        }
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            context,
+            timeInMillis.hashCode(),
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
+                } else {
+                    // Fallback or request permission
+                    val intentSettings = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    context.startActivity(intentSettings)
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
+            }
+        } catch (e: SecurityException) {
+            android.util.Log.e("CommLinkViewModel", "Permission denied for exact alarm", e)
+        }
+    }
+
+    private fun loadAlarms() {
+        try {
+            val json = secureStorage.getAlarmsJson()
+            if (json.isNotBlank() && json != "[]") {
+                val listType = object : com.google.gson.reflect.TypeToken<List<com.commvault.commlink.domain.model.AlarmItem>>() {}.type
+                val loadedList: List<com.commvault.commlink.domain.model.AlarmItem> = com.google.gson.Gson().fromJson(json, listType)
+                _alarmsList.value = loadedList
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommLinkViewModel", "Error loading alarms", e)
+        }
+    }
+
+    fun saveAlarm(alarm: com.commvault.commlink.domain.model.AlarmItem, context: Context) {
+        val currentList = _alarmsList.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.id == alarm.id }
+        if (existingIndex >= 0) {
+            currentList[existingIndex] = alarm
+        } else {
+            currentList.add(alarm)
+        }
+        
+        // Sort by time
+        currentList.sortBy { it.timeInMillis }
+        
+        _alarmsList.value = currentList
+        val json = com.google.gson.Gson().toJson(currentList)
+        secureStorage.saveAlarmsJson(json)
+        
+        if (alarm.isEnabled && alarm.timeInMillis > System.currentTimeMillis()) {
+            scheduleExactAlarm(
+                timeInMillis = alarm.timeInMillis,
+                title = alarm.title,
+                message = "Scheduled Alarm Triggered",
+                alarmType = alarm.alarmType,
+                maxVolume = alarm.maxVolume,
+                intervalSecs = alarm.intervalSecs,
+                repeatCount = alarm.repeatCount,
+                context = context
+            )
+        } else if (!alarm.isEnabled) {
+            cancelOSAlarm(alarm.timeInMillis, context)
+        }
+    }
+
+    fun deleteAlarm(alarmId: String, context: Context) {
+        val currentList = _alarmsList.value.toMutableList()
+        val alarmToDelete = currentList.find { it.id == alarmId }
+        if (alarmToDelete != null) {
+            cancelOSAlarm(alarmToDelete.timeInMillis, context)
+            currentList.remove(alarmToDelete)
+            _alarmsList.value = currentList
+            val json = com.google.gson.Gson().toJson(currentList)
+            secureStorage.saveAlarmsJson(json)
+        }
+    }
+
+    fun toggleAlarm(alarmId: String, isEnabled: Boolean, context: Context) {
+        val currentList = _alarmsList.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.id == alarmId }
+        if (existingIndex >= 0) {
+            val updatedAlarm = currentList[existingIndex].copy(isEnabled = isEnabled)
+            currentList[existingIndex] = updatedAlarm
+            _alarmsList.value = currentList
+            val json = com.google.gson.Gson().toJson(currentList)
+            secureStorage.saveAlarmsJson(json)
+            
+            if (isEnabled && updatedAlarm.timeInMillis > System.currentTimeMillis()) {
+                scheduleExactAlarm(
+                    timeInMillis = updatedAlarm.timeInMillis,
+                    title = updatedAlarm.title,
+                    message = "Scheduled Alarm Triggered",
+                    alarmType = updatedAlarm.alarmType,
+                    maxVolume = updatedAlarm.maxVolume,
+                    intervalSecs = updatedAlarm.intervalSecs,
+                    repeatCount = updatedAlarm.repeatCount,
+                    context = context
+                )
+            } else {
+                cancelOSAlarm(updatedAlarm.timeInMillis, context)
+            }
+        }
+    }
+
+    private fun cancelOSAlarm(timeInMillis: Long, context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = android.content.Intent(context, com.commvault.commlink.receiver.AlarmReceiver::class.java)
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            context,
+            timeInMillis.hashCode(),
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
+
+    // --- HYDRATION REMINDERS ---
+    private val _hydrationReminders = MutableStateFlow<List<com.commvault.commlink.domain.model.HydrationReminder>>(emptyList())
+    val hydrationReminders: StateFlow<List<com.commvault.commlink.domain.model.HydrationReminder>> = _hydrationReminders.asStateFlow()
+
+    init {
+        loadHydrationReminders()
+    }
+
+    private fun loadHydrationReminders() {
+        try {
+            val json = secureStorage.getHydrationRemindersJson()
+            if (json.isNotBlank() && json != "[]") {
+                val listType = object : com.google.gson.reflect.TypeToken<List<com.commvault.commlink.domain.model.HydrationReminder>>() {}.type
+                val loadedList: List<com.commvault.commlink.domain.model.HydrationReminder> = com.google.gson.Gson().fromJson(json, listType)
+                _hydrationReminders.value = loadedList
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommLinkViewModel", "Error loading hydration reminders", e)
+        }
+    }
+
+    private fun persistHydrationReminders() {
+        val json = com.google.gson.Gson().toJson(_hydrationReminders.value)
+        secureStorage.saveHydrationRemindersJson(json)
+    }
+
+    fun saveHydrationReminder(reminder: com.commvault.commlink.domain.model.HydrationReminder, context: Context) {
+        val currentList = _hydrationReminders.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.id == reminder.id }
+        if (existingIndex >= 0) {
+            currentList[existingIndex] = reminder
+        } else {
+            currentList.add(reminder)
+        }
+        currentList.sortBy { it.hour * 60 + it.minute }
+        _hydrationReminders.value = currentList
+        persistHydrationReminders()
+
+        if (reminder.isEnabled) {
+            scheduleHydrationReminder(reminder, context)
+        } else {
+            cancelHydrationReminder(reminder, context)
+        }
+    }
+
+    fun deleteHydrationReminder(reminderId: String, context: Context) {
+        val reminder = _hydrationReminders.value.find { it.id == reminderId }
+        if (reminder != null) {
+            cancelHydrationReminder(reminder, context)
+            _hydrationReminders.value = _hydrationReminders.value.filter { it.id != reminderId }
+            persistHydrationReminders()
+        }
+    }
+
+    fun toggleHydrationReminder(reminderId: String, isEnabled: Boolean, context: Context) {
+        val currentList = _hydrationReminders.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.id == reminderId }
+        if (existingIndex >= 0) {
+            val updated = currentList[existingIndex].copy(isEnabled = isEnabled)
+            currentList[existingIndex] = updated
+            _hydrationReminders.value = currentList
+            persistHydrationReminders()
+
+            if (isEnabled) {
+                scheduleHydrationReminder(updated, context)
+            } else {
+                cancelHydrationReminder(updated, context)
+            }
+        }
+    }
+
+    private fun scheduleHydrationReminder(reminder: com.commvault.commlink.domain.model.HydrationReminder, context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = android.content.Intent(context, com.commvault.commlink.receiver.HydrationReminderReceiver::class.java).apply {
+            putExtra("HYDRATION_LABEL", reminder.label)
+            putExtra("HYDRATION_REMINDER_ID", reminder.id)
+            putExtra("HYDRATION_HOUR", reminder.hour)
+            putExtra("HYDRATION_MINUTE", reminder.minute)
+        }
+        val requestCode = reminder.id.hashCode() + 5000
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Calculate next trigger time
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, reminder.hour)
+            set(java.util.Calendar.MINUTE, reminder.minute)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(java.util.Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                } else {
+                    alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+            }
+            android.util.Log.d("HydrationReminder", "Scheduled for ${reminder.hour}:${reminder.minute}, triggerAt=${calendar.timeInMillis}")
+        } catch (e: SecurityException) {
+            android.util.Log.e("CommLinkViewModel", "Permission denied for hydration reminder alarm", e)
+        }
+    }
+
+    private fun cancelHydrationReminder(reminder: com.commvault.commlink.domain.model.HydrationReminder, context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = android.content.Intent(context, com.commvault.commlink.receiver.HydrationReminderReceiver::class.java)
+        val requestCode = reminder.id.hashCode() + 5000
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
+
+    // --- BLUETOOTH MAC ADDRESS SPOOFING (ROOT) ---
+    private val _originalBluetoothMac = MutableStateFlow<String?>(null)
+    val originalBluetoothMac: StateFlow<String?> = _originalBluetoothMac.asStateFlow()
+
+    private val _currentBluetoothMac = MutableStateFlow("")
+    val currentBluetoothMac: StateFlow<String> = _currentBluetoothMac.asStateFlow()
+
+    private val _isMacSpoofed = MutableStateFlow(false)
+    val isMacSpoofed: StateFlow<Boolean> = _isMacSpoofed.asStateFlow()
+
+    private val _macSpoofStatus = MutableStateFlow("")
+    val macSpoofStatus: StateFlow<String> = _macSpoofStatus.asStateFlow()
+
+    private fun executeRootCommand(command: String): String? {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+            val result = process.inputStream.bufferedReader().readText().trim()
+            val error = process.errorStream.bufferedReader().readText().trim()
+            process.waitFor()
+            if (process.exitValue() == 0 && result.isNotBlank()) result else {
+                Log.e("MacSpoof", "Root command error: $error")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("MacSpoof", "Root command failed: ${e.message}", e)
+            null
+        }
+    }
+
+    fun readCurrentBluetoothMac() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val mac = executeRootCommand("settings get secure bluetooth_address")
+            if (mac != null && mac.contains(":")) {
+                _currentBluetoothMac.value = mac.uppercase()
+                if (_originalBluetoothMac.value == null) {
+                    _originalBluetoothMac.value = mac.uppercase()
+                }
+            } else {
+                // Fallback: try reading from BluetoothAdapter
+                try {
+                    val adapterMac = bluetoothAdapter?.address ?: "Unknown"
+                    _currentBluetoothMac.value = adapterMac.uppercase()
+                    if (_originalBluetoothMac.value == null) {
+                        _originalBluetoothMac.value = adapterMac.uppercase()
+                    }
+                } catch (e: Exception) {
+                    _currentBluetoothMac.value = "Unable to read"
+                }
+            }
+        }
+    }
+
+    fun spoofBluetoothMac(newMac: String) {
+        val formattedMac = newMac.uppercase().trim()
+        // Validate MAC format: XX:XX:XX:XX:XX:XX
+        val macRegex = Regex("^([0-9A-F]{2}:){5}[0-9A-F]{2}$")
+        if (!macRegex.matches(formattedMac)) {
+            _macSpoofStatus.value = "Invalid MAC format. Use XX:XX:XX:XX:XX:XX"
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _macSpoofStatus.value = "Applying..."
+
+            // Save original if not already saved
+            if (_originalBluetoothMac.value == null) {
+                val currentMac = executeRootCommand("settings get secure bluetooth_address")
+                if (currentMac != null && currentMac.contains(":")) {
+                    _originalBluetoothMac.value = currentMac.uppercase()
+                }
+            }
+
+            // Write new MAC
+            val writeResult = executeRootCommand("settings put secure bluetooth_address $formattedMac")
+
+            // Cycle Bluetooth to apply
+            executeRootCommand("service call bluetooth_manager 8") // disable
+            delay(1500)
+            executeRootCommand("service call bluetooth_manager 6") // enable
+            delay(2000)
+
+            // Verify
+            val verifyMac = executeRootCommand("settings get secure bluetooth_address")
+            if (verifyMac != null && verifyMac.uppercase().trim() == formattedMac) {
+                _currentBluetoothMac.value = formattedMac
+                _isMacSpoofed.value = true
+                _macSpoofStatus.value = "MAC address changed successfully!"
+            } else {
+                _macSpoofStatus.value = "Failed to apply. Root access may be denied."
+            }
+        }
+    }
+
+    fun restoreOriginalMac() {
+        val original = _originalBluetoothMac.value ?: return
+        if (!_isMacSpoofed.value) return
+
+        kotlin.concurrent.thread {
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "settings put secure bluetooth_address $original"))
+                process.waitFor()
+
+                // Cycle BT
+                val disableProcess = Runtime.getRuntime().exec(arrayOf("su", "-c", "service call bluetooth_manager 8"))
+                disableProcess.waitFor()
+                Thread.sleep(1000)
+                val enableProcess = Runtime.getRuntime().exec(arrayOf("su", "-c", "service call bluetooth_manager 6"))
+                enableProcess.waitFor()
+
+                _currentBluetoothMac.value = original
+                _isMacSpoofed.value = false
+                _macSpoofStatus.value = "Original MAC restored."
+            } catch (e: Exception) {
+                Log.e("MacSpoof", "Failed to restore original MAC", e)
+            }
+        }
+    }
+
+    // --- SMART FEATURES ---
+
+    // Shake to Launch
+    private val _isShakeToLaunchEnabled = MutableStateFlow(prefs.getBoolean("shake_to_launch", false))
+    val isShakeToLaunchEnabled: StateFlow<Boolean> = _isShakeToLaunchEnabled.asStateFlow()
+
+    fun setShakeToLaunchEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("shake_to_launch", enabled).apply()
+        _isShakeToLaunchEnabled.value = enabled
+        val context = getApplication<Application>()
+        if (enabled) {
+            com.commvault.commlink.service.ShakeDetectorService.start(context)
+        } else {
+            com.commvault.commlink.service.ShakeDetectorService.stop(context)
+        }
+    }
+
+    // Restore shake service on app start if enabled
+    init {
+        if (_isShakeToLaunchEnabled.value) {
+            com.commvault.commlink.service.ShakeDetectorService.start(getApplication())
+        }
+    }
+
+    // Auto-Lock on Walk Away
+    private val _isAutoLockEnabled = MutableStateFlow(prefs.getBoolean("auto_lock_walkaway", false))
+    val isAutoLockEnabled: StateFlow<Boolean> = _isAutoLockEnabled.asStateFlow()
+    
+    private val _currentSignalStrength = MutableStateFlow(100) // 0 to 100%
+    val currentSignalStrength: StateFlow<Int> = _currentSignalStrength.asStateFlow()
+
+    private val _autoLockDistanceThreshold = MutableStateFlow(prefs.getFloat("auto_lock_threshold", 0.0f)) // 0f (Near, 5m) to 1f (Far, 20m)
+    val autoLockDistanceThreshold: StateFlow<Float> = _autoLockDistanceThreshold.asStateFlow()
+
+    private var autoLockJob: Job? = null
+    private var lastAutoLockTime = 0L
+    private val autoLockCooldownMs = 60000L // 60-second cooldown
+    private var rssiReceiver: android.content.BroadcastReceiver? = null
+
+    fun setAutoLockDistanceThreshold(value: Float) {
+        prefs.edit().putFloat("auto_lock_threshold", value).apply()
+        _autoLockDistanceThreshold.value = value
+    }
+
+    fun setAutoLockEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("auto_lock_walkaway", enabled).apply()
+        _isAutoLockEnabled.value = enabled
+        if (enabled && connectionState.value is com.commvault.commlink.data.bluetooth.HidDeviceManager.ConnectionState.Connected) {
+            startAutoLockMonitor()
+        } else {
+            stopAutoLockMonitor()
+        }
+    }
+
+    fun startAutoLockMonitor() {
+        if (autoLockJob?.isActive == true) return
+        if (!_isAutoLockEnabled.value) return
+
+        autoLockJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(2000)
+            while (isActive && _isAutoLockEnabled.value) {
+                if (connectionState.value is com.commvault.commlink.data.bluetooth.HidDeviceManager.ConnectionState.Connected) {
+                    val startTime = System.currentTimeMillis()
+                    val success = hidDeviceManager.sendMouseReportWithResult(0f, 0f, 0, 0)
+                    val rtt = System.currentTimeMillis() - startTime
+                    
+                    if (success) {
+                        // Update UI signal strength (roughly mapping RTT to %)
+                        val percentage = (100 - (rtt / 5)).toInt().coerceIn(0, 100)
+                        _currentSignalStrength.value = percentage
+                        
+                        // Estimate distance by latency. If RTT is high (retransmissions), signal is weak.
+                        // thresholdMs range: 50ms (Near) to 350ms (Far)
+                        val thresholdMs = 50 + (_autoLockDistanceThreshold.value * 300).toLong()
+                        
+                        if (rtt > thresholdMs) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastAutoLockTime > autoLockCooldownMs) {
+                                Log.d("AutoLock", "High latency ($rtt ms > $thresholdMs ms). Locking PC.")
+                                hidDeviceManager.sendKeyPress(
+                                    com.commvault.commlink.domain.model.HidKeyCodes.KEY_L,
+                                    com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_GUI,
+                                    useSticky = false
+                                )
+                                lastAutoLockTime = now
+                            }
+                        }
+                    } else {
+                        // Option A: Ping failed (Disconnecting). Try to lock immediately!
+                        val now = System.currentTimeMillis()
+                        if (now - lastAutoLockTime > autoLockCooldownMs) {
+                            Log.d("AutoLock", "Ping Failed. Attempting to lock PC before disconnect.")
+                            hidDeviceManager.sendKeyPress(
+                                com.commvault.commlink.domain.model.HidKeyCodes.KEY_L,
+                                com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_GUI,
+                                useSticky = false
+                            )
+                            lastAutoLockTime = now
+                        }
+                        _currentSignalStrength.value = 0
+                    }
+                } else {
+                    _currentSignalStrength.value = 0
+                }
+                delay(3000)
+            }
+        }
+    }
+
+    fun stopAutoLockMonitor() {
+        autoLockJob?.cancel()
+        autoLockJob = null
+        rssiReceiver?.let {
+            try { getApplication<Application>().unregisterReceiver(it) } catch (e: Exception) {}
+            rssiReceiver = null
+        }
+        _currentSignalStrength.value = 100
+    }
+
+    // Start/stop auto-lock monitor when connection state changes
+    init {
+        viewModelScope.launch {
+            connectionState.collect { state ->
+                if (state is com.commvault.commlink.data.bluetooth.HidDeviceManager.ConnectionState.Connected && _isAutoLockEnabled.value) {
+                    startAutoLockMonitor()
+                } else if (state is com.commvault.commlink.data.bluetooth.HidDeviceManager.ConnectionState.Disconnected) {
+                    stopAutoLockMonitor()
+                }
+            }
+        }
     }
 }
 data class TextSnippet(

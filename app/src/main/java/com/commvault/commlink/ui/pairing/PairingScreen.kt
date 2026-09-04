@@ -110,7 +110,7 @@ fun PairingScreen(
                         },
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .background(if (isScanning) CommvaultPink else LightSurfaceAlt, CircleShape)
+                            .background(if (isScanning) LocalPrimaryColor.current else LightSurfaceAlt, CircleShape)
                             .size(36.dp)
                     ) {
                         Icon(
@@ -146,7 +146,7 @@ fun PairingScreen(
                     color = LightSurface,
                     shape = RoundedCornerShape(14.dp),
                     shadowElevation = 2.dp,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CommvaultPink)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LocalPrimaryColor.current)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -154,7 +154,7 @@ fun PairingScreen(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = CommvaultPink,
+                            color = LocalPrimaryColor.current,
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -187,7 +187,7 @@ fun PairingScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = CommvaultPink)
+                        CircularProgressIndicator(color = LocalPrimaryColor.current)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Searching for nearby computers...",

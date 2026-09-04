@@ -77,6 +77,13 @@ object HidKeyCodes {
     const val KEY_DOWN: Byte = 0x51
     const val KEY_UP: Byte = 0x52
     
+    const val KEY_INSERT: Byte = 0x49
+    const val KEY_HOME: Byte = 0x4A
+    const val KEY_PAGE_UP: Byte = 0x4B
+    const val KEY_DELETE: Byte = 0x4C
+    const val KEY_END: Byte = 0x4D
+    const val KEY_PAGE_DOWN: Byte = 0x4E
+    
     const val MODIFIER_NONE: Byte = 0
     const val MODIFIER_LEFT_CTRL: Byte = 0x01
     const val MODIFIER_LEFT_SHIFT: Byte = 0x02

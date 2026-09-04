@@ -1,0 +1,16 @@
+--- app/src/main/java/com/commvault/commlink/MainActivity.kt
++++ app/src/main/java/com/commvault/commlink/MainActivity.kt
+@@ -620,6 +620,13 @@
+             )
+         }
+ 
++        composable("media_remote") {
++            MediaRemoteScreen(
++                viewModel = viewModel,
++                onBack = { navController.popBackStack() }
++            )
++        }
++
+         composable("chatroom/{peerName}") { backStackEntry ->
+             val peerName = backStackEntry.arguments?.getString("peerName") ?: ""
+             ChatRoomScreen(

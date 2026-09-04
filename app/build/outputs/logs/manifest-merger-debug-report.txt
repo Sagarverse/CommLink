@@ -1,20 +1,20 @@
 -- Merging decision tree log ---
 provider#androidx.core.content.FileProvider
-INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:53:9-61:20
+INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:61:9-69:20
 	android:grantUriPermissions
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:57:13-47
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:65:13-47
 	android:authorities
 		INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:55:13-64
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:63:13-64
 	android:exported
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:56:13-37
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:64:13-37
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:54:13-62
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:62:13-62
 manifest
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-65:12
-INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-65:12
-INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-65:12
-INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-65:12
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-85:12
+INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-85:12
+INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-85:12
+INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:2:1-85:12
 MERGED from [androidx.navigation:navigation-common:2.8.5] /Users/sagarm/.gradle/caches/9.1.0/transforms/11f51caf4080e3d8ddf2c003539a2662/transformed/navigation-common-2.8.5/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-runtime:2.8.5] /Users/sagarm/.gradle/caches/9.1.0/transforms/6ef570d0f2532159978ca6d6bb870ca4/transformed/navigation-runtime-2.8.5/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-common-ktx:2.8.5] /Users/sagarm/.gradle/caches/9.1.0/transforms/9565e50339f48bad089727caa5b871c0/transformed/navigation-common-ktx-2.8.5/AndroidManifest.xml:2:1-7:12
@@ -175,15 +175,23 @@ uses-permission#android.permission.CALL_PHONE
 ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:24:5-69
 	android:name
 		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:24:22-66
-uses-feature#android.hardware.bluetooth
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:25:5-86
-	android:required
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:25:61-84
+uses-permission#android.permission.SCHEDULE_EXACT_ALARM
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:25:5-79
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:25:19-60
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:25:22-76
+uses-permission#android.permission.USE_EXACT_ALARM
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:26:5-74
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:26:22-71
+uses-feature#android.hardware.bluetooth
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:27:5-86
+	android:required
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:27:61-84
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:27:19-60
 application
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:27:5-63:19
-INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:27:5-63:19
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:29:5-83:19
+INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:29:5-83:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /Users/sagarm/.gradle/caches/9.1.0/transforms/7aebd99d1a0c1315c5097f3e0fbf8375/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /Users/sagarm/.gradle/caches/9.1.0/transforms/7aebd99d1a0c1315c5097f3e0fbf8375/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] /Users/sagarm/.gradle/caches/9.1.0/transforms/0a11451e2e4b5fab2acaf5604114a5f4/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
@@ -205,55 +213,83 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/saga
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] /Users/sagarm/.gradle/caches/9.1.0/transforms/a37ece595a3765fae660035f117e98b7/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:33:9-35
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:35:9-35
 	android:label
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:31:9-41
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:33:9-41
 	android:roundIcon
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:32:9-54
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:34:9-53
 	android:icon
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:30:9-43
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:32:9-48
 	android:allowBackup
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:29:9-36
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:31:9-36
 	android:theme
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:34:9-46
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:36:9-46
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:28:9-58
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:30:9-58
 activity#com.commvault.commlink.MainActivity
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:36:9-45:20
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:38:9-47:20
 	android:exported
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:38:13-36
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:40:13-36
 	android:configChanges
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:39:13-74
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:41:13-74
 	android:theme
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:40:13-50
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:42:13-50
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:37:13-63
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:39:13-63
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:41:13-44:29
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:43:13-46:29
 action#android.intent.action.MAIN
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:42:17-69
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:44:17-69
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:42:25-66
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:44:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:43:17-77
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:45:17-77
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:43:27-74
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:45:27-74
 service#com.commvault.commlink.data.bluetooth.HidService
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:47:9-51:63
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:49:9-53:63
 	android:enabled
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:49:13-35
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:51:13-35
 	android:exported
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:50:13-37
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:52:13-37
 	android:foregroundServiceType
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:51:13-60
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:53:13-60
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:48:13-76
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:50:13-76
+service#com.commvault.commlink.service.ShakeDetectorService
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:55:9-59:60
+	android:enabled
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:57:13-35
+	android:exported
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:58:13-37
+	android:foregroundServiceType
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:59:13-57
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:56:13-79
+receiver#com.commvault.commlink.receiver.AlarmReceiver
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:71:9-73:40
+	android:exported
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:73:13-37
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:72:13-73
+receiver#com.commvault.commlink.receiver.AlarmActionReceiver
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:75:9-77:40
+	android:exported
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:77:13-37
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:76:13-79
+receiver#com.commvault.commlink.receiver.HydrationReminderReceiver
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:79:9-81:40
+	android:exported
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:81:13-37
+	android:name
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:80:13-85
 meta-data#android.support.FILE_PROVIDER_PATHS
-ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:58:13-60:54
+ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:66:13-68:54
 	android:resource
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:60:17-51
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:68:17-51
 	android:name
-		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:59:17-67
+		ADDED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml:67:17-67
 uses-sdk
 INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/sagarm/Live/CommLink/app/src/main/AndroidManifest.xml

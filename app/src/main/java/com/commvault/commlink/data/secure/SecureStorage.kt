@@ -48,9 +48,37 @@ class SecureStorage(private val context: Context) {
 
     fun getPasswordVaultJson(): String = prefs.getString(KEY_PASSWORD_VAULT_JSON, "[]") ?: "[]"
 
+    fun saveAlarmsJson(json: String) {
+        prefs.edit().putString(KEY_ALARMS_JSON, json).apply()
+    }
+
+    fun getAlarmsJson(): String = prefs.getString(KEY_ALARMS_JSON, "[]") ?: "[]"
+
+    fun saveTodosJson(json: String) {
+        prefs.edit().putString(KEY_TODOS_JSON, json).apply()
+    }
+
+    fun getTodosJson(): String = prefs.getString(KEY_TODOS_JSON, "[]") ?: "[]"
+
+    fun saveHydrationRemindersJson(json: String) {
+        prefs.edit().putString(KEY_HYDRATION_REMINDERS_JSON, json).apply()
+    }
+
+    fun getHydrationRemindersJson(): String = prefs.getString(KEY_HYDRATION_REMINDERS_JSON, "[]") ?: "[]"
+
+    fun saveThemeColor(hex: String) {
+        prefs.edit().putString(KEY_THEME_COLOR, hex).apply()
+    }
+
+    fun getThemeColor(): String = prefs.getString(KEY_THEME_COLOR, "") ?: ""
+
     companion object {
         private const val KEY_EMAIL = "commvault_email"
         private const val KEY_PASSWORD = "commvault_password"
         private const val KEY_PASSWORD_VAULT_JSON = "password_vault_json"
+        private const val KEY_ALARMS_JSON = "alarms_json"
+        private const val KEY_TODOS_JSON = "todos_json"
+        private const val KEY_HYDRATION_REMINDERS_JSON = "hydration_reminders_json"
+        private const val KEY_THEME_COLOR = "theme_color_hex"
     }
 }

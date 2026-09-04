@@ -1,0 +1,19 @@
+@@ -482,6 +482,18 @@
+         }
+     }
+ 
++    fun sendMediaKey(bits: Byte) {
++        scope.launch {
++            if (connectionState.value !is ConnectionState.Connected) return@launch
++            
++            // Send the key press
++            reportChannel.send(ReportRequest(4, byteArrayOf(bits)))
++            
++            // Send release immediately (media keys are usually instantaneous)
++            reportChannel.send(ReportRequest(4, byteArrayOf(0)))
++        }
++    }
++
+     fun releaseAll() {
+         scope.launch {
+             _currentModifiers.value = 0

@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import com.commvault.commlink.ui.theme.*
 
 // ─── Bounce-on-press with lift shadow ─────────────────────────────────
@@ -66,8 +71,6 @@ fun Modifier.bounceClick(
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
-            shadowElevation = elevation.toPx()
-            shape = RoundedCornerShape(16.dp)
             clip = false
         }
         .pointerInput(enabled) {
@@ -126,7 +129,7 @@ fun Modifier.staggeredFadeIn(
 // ─── Gradient accent border glow ──────────────────────────────────────
 @Composable
 fun Modifier.glowBorder(
-    glowColor: Color = CommvaultPink,
+    glowColor: Color = LocalPrimaryColor.current,
     cornerRadius: Dp = 16.dp,
     glowAlpha: Float = 0.3f
 ): Modifier = composed {
@@ -136,6 +139,59 @@ fun Modifier.glowBorder(
             cornerRadius = CornerRadius(cornerRadius.toPx()),
             size = Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx()),
             topLeft = Offset(-2.dp.toPx(), -2.dp.toPx())
+        )
+    }
+}
+
+// ─── Ceramic Emerald Specific Components ──────────────────────────────
+@Composable
+fun CeramicCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    val baseModifier = modifier
+        .shadow(
+            elevation = 16.dp,
+            shape = RoundedCornerShape(28.dp),
+            ambientColor = Color.Black.copy(alpha = 0.02f),
+            spotColor = Color.Black.copy(alpha = 0.04f)
+        )
+        .background(Color.White, RoundedCornerShape(28.dp))
+        
+    val clickableModifier = if (onClick != null) {
+        baseModifier.bounceClick { onClick() }
+    } else {
+        baseModifier
+    }
+
+    Box(
+        modifier = clickableModifier.padding(20.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun EmeraldButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .bounceClick { onClick() }
+            .background(LocalPrimaryColor.current, androidx.compose.foundation.shape.CircleShape),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        androidx.compose.material3.Text(
+            text = text,
+            color = Color.White,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+            fontSize = 17.sp,
+            letterSpacing = 0.5.sp
         )
     }
 }

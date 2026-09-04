@@ -65,7 +65,7 @@ fun SnippetsScreen(
                         }
                     }
                 ) {
-                    Text("Save", color = CommvaultPink)
+                    Text("Save", color = LocalPrimaryColor.current)
                 }
             },
             dismissButton = {
@@ -84,7 +84,7 @@ fun SnippetsScreen(
                         label = { Text("Name", color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -98,7 +98,7 @@ fun SnippetsScreen(
                         minLines = 3,
                         maxLines = 10,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -110,7 +110,7 @@ fun SnippetsScreen(
                         label = { Text("Category (e.g. Email, Commands)", color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -137,7 +137,7 @@ fun SnippetsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = CommvaultPink,
+                containerColor = LocalPrimaryColor.current,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Template")
@@ -192,7 +192,7 @@ fun SnippetsScreen(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextTertiary) },
                 shape = MaterialTheme.shapes.large,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = CommvaultPink,
+                    focusedBorderColor = LocalPrimaryColor.current,
                     unfocusedBorderColor = BorderColor,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
@@ -248,14 +248,14 @@ fun SnippetsScreen(
                                         Box(
                                             modifier = Modifier
                                                 .background(
-                                                    CommvaultPink.copy(alpha = 0.1f),
+                                                    LocalPrimaryColor.current.copy(alpha = 0.1f),
                                                     RoundedCornerShape(6.dp)
                                                 )
                                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                                         ) {
                                             Text(
                                                 text = snippet.category.uppercase(),
-                                                color = CommvaultPink,
+                                                color = LocalPrimaryColor.current,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold
                                             )

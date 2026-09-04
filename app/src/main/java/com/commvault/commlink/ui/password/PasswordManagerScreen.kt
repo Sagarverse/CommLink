@@ -71,7 +71,7 @@ fun PasswordManagerScreen(
                         }
                     }
                 ) {
-                    Text("Save", color = CommvaultPink)
+                    Text("Save", color = LocalPrimaryColor.current)
                 }
             },
             dismissButton = {
@@ -90,7 +90,7 @@ fun PasswordManagerScreen(
                         label = { Text("Account Name (e.g. AD Login)", color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -103,7 +103,7 @@ fun PasswordManagerScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -115,7 +115,7 @@ fun PasswordManagerScreen(
                         label = { Text("Category (e.g. Commvault, Server)", color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CommvaultPink,
+                            focusedBorderColor = LocalPrimaryColor.current,
                             unfocusedBorderColor = BorderColor,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -145,7 +145,7 @@ fun PasswordManagerScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = CommvaultPink,
+                containerColor = LocalPrimaryColor.current,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Password")
@@ -200,7 +200,7 @@ fun PasswordManagerScreen(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextTertiary) },
                 shape = MaterialTheme.shapes.large,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = CommvaultPink,
+                    focusedBorderColor = LocalPrimaryColor.current,
                     unfocusedBorderColor = BorderColor,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
@@ -285,14 +285,14 @@ fun PasswordManagerScreen(
                                             Box(
                                                 modifier = Modifier
                                                     .background(
-                                                        CommvaultPink.copy(alpha = 0.1f),
+                                                        LocalPrimaryColor.current.copy(alpha = 0.1f),
                                                         RoundedCornerShape(6.dp)
                                                     )
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = entry.category.uppercase(),
-                                                    color = CommvaultPink,
+                                                    color = LocalPrimaryColor.current,
                                                     fontSize = 8.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )

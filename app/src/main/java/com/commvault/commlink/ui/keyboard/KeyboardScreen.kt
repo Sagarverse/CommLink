@@ -10,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,8 +35,9 @@ import com.commvault.commlink.ui.theme.*
 @Composable
 fun KeyboardScreen(
     viewModel: CommLinkViewModel,
-    onDisconnect: () -> Unit
+    onBack: () -> Unit
 ) {
+    var isSystemKeyboardMode by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
     val connectionState by viewModel.connectionState.collectAsState()
     var wasConnected by remember { mutableStateOf(false) }
@@ -46,7 +50,7 @@ fun KeyboardScreen(
             is HidDeviceManager.ConnectionState.Disconnected -> {
                 if (wasConnected) {
                     wasConnected = false
-                    onDisconnect()
+                    onBack()
                 }
             }
             else -> Unit
@@ -84,14 +88,29 @@ fun KeyboardScreen(
                         )
                         Text(
                             text = if (isTextPushing) "Sending text..." else "Connected",
-                            color = if (isTextPushing) CommvaultPink else SuccessTeal,
+                            color = if (isTextPushing) LocalPrimaryColor.current else SuccessTeal,
                             fontSize = 11.sp
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onDisconnect) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    val isPushPaused by viewModel.isPushPaused.collectAsState()
+                    if (isTextPushing || isPushPaused) {
+                        IconButton(onClick = { viewModel.toggleTextPushPause() }) {
+                            Icon(
+                                if (isPushPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                contentDescription = if (isPushPaused) "Resume" else "Pause",
+                                tint = CommvaultNavy
+                            )
+                        }
+                        IconButton(onClick = { viewModel.stopTextPush() }) {
+                            Icon(Icons.Default.Stop, contentDescription = "Stop", tint = androidx.compose.ui.graphics.Color.Red)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBg)
@@ -125,7 +144,7 @@ fun KeyboardScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(MaterialTheme.shapes.medium)
-                            .background(if (active) CommvaultPink else Color.Transparent)
+                            .background(if (active) LocalPrimaryColor.current else Color.Transparent)
                             .clickable { selectedTab = index }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center,
@@ -210,7 +229,7 @@ fun InputTab(viewModel: CommLinkViewModel) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (active) CommvaultPink else LightSurfaceAlt)
+                            .background(if (active) LocalPrimaryColor.current else LightSurfaceAlt)
                             .clickable { viewModel.setTypingSpeed(speed) }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
@@ -280,7 +299,7 @@ fun SystemKeyboardInput(viewModel: CommLinkViewModel) {
                 autoCorrectEnabled = false
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = CommvaultPink,
+                focusedBorderColor = LocalPrimaryColor.current,
                 unfocusedBorderColor = BorderColor,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
@@ -305,7 +324,7 @@ fun SystemKeyboardInput(viewModel: CommLinkViewModel) {
             placeholder = { Text("Paste text here and hit send...", color = TextTertiary) },
             shape = MaterialTheme.shapes.large,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = CommvaultPink,
+                focusedBorderColor = LocalPrimaryColor.current,
                 unfocusedBorderColor = BorderColor,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
@@ -330,7 +349,7 @@ fun SystemKeyboardInput(viewModel: CommLinkViewModel) {
                     viewModel.sendText(batchText)
                     batchText = "" 
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CommvaultPink),
+                colors = ButtonDefaults.buttonColors(containerColor = LocalPrimaryColor.current),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text("Send Text", color = Color.White)
@@ -347,15 +366,38 @@ fun RemoteKeyboardLayout(
 ) {
     val haptic = LocalHapticFeedback.current
 
+    val fnKeys = listOf("F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12")
     val rows = listOf(
+        listOf("Esc", "Tab", "Del", "Home", "End", "PgUp", "PgDn"),
         listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
         listOf("A", "S", "D", "F", "G", "H", "J", "K", "L"),
         listOf("Z", "X", "C", "V", "B", "N", "M", "Bksp"),
-        listOf("Ctrl", "Alt", "Win", "Space", "Enter")
+        listOf("Shift", "Ctrl", "Win", "Alt", "Space", "Enter")
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // F-Keys (scrollable row)
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 2.dp)
+        ) {
+            items(fnKeys.size) { index ->
+                val label = fnKeys[index]
+                val code = HidKeyCodes.KEY_F1 + index
+                PremiumKey(
+                    label = label,
+                    modifier = Modifier.width(42.dp),
+                    accent = TextPrimary,
+                    onPress = {
+                        onKeyPress(code.toByte())
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+            }
+        }
+        
         rows.forEach { row ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp), 
@@ -363,10 +405,18 @@ fun RemoteKeyboardLayout(
             ) {
                 row.forEach { label ->
                     val code = when (label) {
+                        "Esc" -> HidKeyCodes.KEY_ESC
+                        "Tab" -> HidKeyCodes.KEY_TAB
+                        "Del" -> HidKeyCodes.KEY_DELETE
+                        "Home" -> HidKeyCodes.KEY_HOME
+                        "End" -> HidKeyCodes.KEY_END
+                        "PgUp" -> HidKeyCodes.KEY_PAGE_UP
+                        "PgDn" -> HidKeyCodes.KEY_PAGE_DOWN
                         "Bksp" -> HidKeyCodes.KEY_BACKSPACE
                         "Space" -> HidKeyCodes.KEY_SPACE
                         "Enter" -> HidKeyCodes.KEY_ENTER
                         "Ctrl" -> HidKeyCodes.MODIFIER_LEFT_CTRL
+                        "Shift" -> HidKeyCodes.MODIFIER_LEFT_SHIFT
                         "Alt" -> HidKeyCodes.MODIFIER_LEFT_ALT
                         "Win" -> HidKeyCodes.MODIFIER_LEFT_GUI
                         else -> {
@@ -374,7 +424,7 @@ fun RemoteKeyboardLayout(
                             HidKeyCodes.getHidCode(char).keyCode
                         }
                     }
-                    val isMod = label in listOf("Ctrl", "Alt", "Win")
+                    val isMod = label in listOf("Ctrl", "Alt", "Win", "Shift")
                     val isSelected = isMod && ((activeModifiers.toInt() and code.toInt()) != 0)
 
                     PremiumKey(
@@ -382,17 +432,32 @@ fun RemoteKeyboardLayout(
                         modifier = Modifier.weight(
                             when (label) {
                                 "Space" -> 2.4f
-                                "Bksp", "Enter" -> 1.4f
+                                "Bksp", "Enter", "Shift" -> 1.4f
                                 "Ctrl", "Alt", "Win" -> 1.2f
                                 else -> 1f
                             }
                         ),
-                        accent = if (isSelected) CommvaultPink else if (isMod) TextSecondary else TextPrimary,
+                        accent = if (isSelected) LocalPrimaryColor.current else if (isMod) TextSecondary else TextPrimary,
                         onPress = {
                             if (isMod) onModifierClick(code) else onKeyPress(code)
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         },
                     )
+                }
+            }
+        }
+
+        // Arrow keys block
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PremiumKey("↑", modifier = Modifier.width(60.dp), accent = TextPrimary, onPress = { onKeyPress(HidKeyCodes.KEY_UP) })
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PremiumKey("←", modifier = Modifier.width(60.dp), accent = TextPrimary, onPress = { onKeyPress(HidKeyCodes.KEY_LEFT) })
+                    PremiumKey("↓", modifier = Modifier.width(60.dp), accent = TextPrimary, onPress = { onKeyPress(HidKeyCodes.KEY_DOWN) })
+                    PremiumKey("→", modifier = Modifier.width(60.dp), accent = TextPrimary, onPress = { onKeyPress(HidKeyCodes.KEY_RIGHT) })
                 }
             }
         }

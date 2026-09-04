@@ -52,10 +52,10 @@ fun ChatScreen(
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Wifi, contentDescription = null, tint = CommvaultPink, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.Wifi, contentDescription = null, tint = LocalPrimaryColor.current, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text("Local Chat", color = CommvaultNavy, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Text("CommDrop", color = CommvaultNavy, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                                 Text("${discoveredPeers.size} peers on Wi-Fi", color = TextSecondary, fontSize = 11.sp)
                             }
                         }
