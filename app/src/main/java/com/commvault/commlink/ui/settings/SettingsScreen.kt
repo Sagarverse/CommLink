@@ -10,6 +10,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -276,7 +277,19 @@ fun SettingsScreen(
                 subtitle = "Shake your phone to bring CommLink to the foreground.",
                 icon = Icons.Default.PhoneAndroid,
                 checked = isShakeToLaunchEnabled,
-                onCheckedChange = { viewModel.setShakeToLaunchEnabled(it) }
+                onCheckedChange = { isEnabled ->
+                    if (isEnabled && !Settings.canDrawOverlays(context)) {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:$packageName")
+                        )
+                        context.startActivity(intent)
+                        Toast.makeText(context, "Please allow 'Display over other apps' to use this feature.", Toast.LENGTH_LONG).show()
+                        viewModel.setShakeToLaunchEnabled(false) // Revert toggle until granted
+                    } else {
+                        viewModel.setShakeToLaunchEnabled(isEnabled)
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(12.dp))

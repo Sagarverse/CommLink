@@ -3,7 +3,6 @@ color ic_launcher_background
 drawable commvault_logo
 drawable h_logo
 drawable ic_launcher_foreground
-drawable laptop_device
 drawable premium_device
 drawable sagar_profile
 mipmap ic_launcher

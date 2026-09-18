@@ -1,0 +1,1 @@
+We can't list /config/usb_gadget/g1 because it's a real device path.

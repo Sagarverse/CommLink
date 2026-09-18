@@ -31,6 +31,15 @@ class HidDeviceManager private constructor(private val context: Context) {
         private set
     private var deviceRepository: com.commvault.commlink.domain.repository.DeviceRepository? = null
     
+    enum class ConnectionMode {
+        BLUETOOTH, USB
+    }
+
+    private val _connectionMode = MutableStateFlow<ConnectionMode>(ConnectionMode.BLUETOOTH)
+    val connectionMode: StateFlow<ConnectionMode> = _connectionMode.asStateFlow()
+
+    private val usbTransport = com.commvault.commlink.data.hid.UsbHidTransport()
+    
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
@@ -178,8 +187,47 @@ class HidDeviceManager private constructor(private val context: Context) {
         scope.launch {
             for (request in reportChannel) {
                 sendReportInternal(request.id, request.data)
-                // Removed delay(12) to eliminate trackpad latency and prevent queue buildup on high refresh rate displays.
             }
+        }
+        
+        scope.launch {
+            usbTransport.connectionState.collect { state ->
+                if (_connectionMode.value == ConnectionMode.USB) {
+                    when (state) {
+                        is com.commvault.commlink.data.hid.HidTransport.ConnectionState.Connected -> {
+                            _connectionState.value = ConnectionState.Connected(state.deviceName)
+                        }
+                        is com.commvault.commlink.data.hid.HidTransport.ConnectionState.Connecting -> {
+                            _connectionState.value = ConnectionState.Connecting
+                        }
+                        is com.commvault.commlink.data.hid.HidTransport.ConnectionState.Disconnected -> {
+                            _connectionState.value = ConnectionState.Disconnected
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun setConnectionMode(mode: ConnectionMode) {
+        if (_connectionMode.value == mode) return
+        
+        // Disconnect old mode
+        if (_connectionMode.value == ConnectionMode.BLUETOOTH) {
+            disconnect()
+        } else {
+            usbTransport.disconnect()
+        }
+        
+        _connectionMode.value = mode
+        
+        // If switching to USB, automatically connect it since it's a wired plug-and-play feature
+        if (mode == ConnectionMode.USB) {
+            usbTransport.connect()
+        } else {
+            // For Bluetooth, wait for the user to select a device or reconnect
+            _connectionState.value = ConnectionState.Disconnected
+            checkCurrentConnections()
         }
     }
 
@@ -229,6 +277,9 @@ class HidDeviceManager private constructor(private val context: Context) {
     }
 
     fun connect(device: BluetoothDevice) {
+        if (_connectionMode.value != ConnectionMode.BLUETOOTH) {
+            setConnectionMode(ConnectionMode.BLUETOOTH)
+        }
         if (bluetoothAdapter?.isEnabled != true) return
         isManuallyDisconnected = false
         _connectionState.value = ConnectionState.Connecting
@@ -280,6 +331,9 @@ class HidDeviceManager private constructor(private val context: Context) {
     }
 
     fun connectWithRetry(device: BluetoothDevice, maxRetries: Int = 3, retryDelayMs: Long = 1500) {
+        if (_connectionMode.value != ConnectionMode.BLUETOOTH) {
+            setConnectionMode(ConnectionMode.BLUETOOTH)
+        }
         if (bluetoothAdapter?.isEnabled != true) return
         isManuallyDisconnected = false
         _connectionState.value = ConnectionState.Connecting
@@ -324,6 +378,11 @@ class HidDeviceManager private constructor(private val context: Context) {
     }
 
     fun disconnect() {
+        if (_connectionMode.value == ConnectionMode.USB) {
+            usbTransport.disconnect()
+            return
+        }
+        
         isManuallyDisconnected = true
         reconnectJob?.cancel()
         connectionTimeoutJob?.cancel()
@@ -339,6 +398,11 @@ class HidDeviceManager private constructor(private val context: Context) {
     }
 
     private fun sendReportInternal(id: Int, data: ByteArray) {
+        if (_connectionMode.value == ConnectionMode.USB) {
+            usbTransport.sendReportInternal(id, data)
+            return
+        }
+        
         val device = connectedDevice ?: return
         if (bluetoothAdapter?.isEnabled != true) return
         try {
@@ -365,6 +429,22 @@ class HidDeviceManager private constructor(private val context: Context) {
         // Send key down
         reportChannel.trySend(ReportRequest(4, byteArrayOf(bits)))
         // Send key up immediately for media keys
+        reportChannel.trySend(ReportRequest(4, byteArrayOf(0)))
+    }
+
+    fun sendConsumerKey(usageId: Short) {
+        if (connectionState.value !is ConnectionState.Connected) return
+        // Map common consumer usage IDs to our 1-byte media report bitmask
+        val bits: Byte = when (usageId.toInt() and 0xFFFF) {
+            0xCD -> 0x01  // Play/Pause
+            0xB5 -> 0x02  // Next Track
+            0xB6 -> 0x04  // Previous Track
+            0xE9 -> 0x10  // Volume Up
+            0xEA -> 0x20.toByte()  // Volume Down
+            0xE2 -> 0x40.toByte()  // Mute
+            else -> return
+        }
+        reportChannel.trySend(ReportRequest(4, byteArrayOf(bits)))
         reportChannel.trySend(ReportRequest(4, byteArrayOf(0)))
     }
 
@@ -431,6 +511,11 @@ class HidDeviceManager private constructor(private val context: Context) {
     }
 
     fun sendMouseReportWithResult(dx: Float, dy: Float, buttons: Int = 0, wheel: Int = 0): Boolean {
+        if (_connectionMode.value == ConnectionMode.USB) {
+            sendMouseMove(dx, dy, buttons, wheel)
+            return true
+        }
+        
         val device = connectedDevice ?: return false
         if (bluetoothAdapter?.isEnabled != true) return false
         val outX = dx.roundToInt().coerceIn(-127, 127)

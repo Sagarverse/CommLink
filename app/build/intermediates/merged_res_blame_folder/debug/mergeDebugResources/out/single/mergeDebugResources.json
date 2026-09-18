@@ -8,6 +8,10 @@
         "source": "/Users/sagarm/.gradle/daemon/9.1.0/com.commvault.commlink.app-main-64:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
+        "merged": "/Users/sagarm/.gradle/daemon/9.1.0/com.commvault.commlink.app-debug-62:/drawable_premium_device.png.flat",
+        "source": "/Users/sagarm/.gradle/daemon/9.1.0/com.commvault.commlink.app-main-64:/drawable/premium_device.png"
+    },
+    {
         "merged": "/Users/sagarm/.gradle/daemon/9.1.0/com.commvault.commlink.app-debug-62:/mipmap-xhdpi_ic_launcher.png.flat",
         "source": "/Users/sagarm/.gradle/daemon/9.1.0/com.commvault.commlink.app-main-64:/mipmap-xhdpi/ic_launcher.png"
     },

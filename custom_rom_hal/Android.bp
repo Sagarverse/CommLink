@@ -1,0 +1,18 @@
+cc_library_shared {
+    name: "audio.primary.virtual",
+    relative_install_path: "hw",
+    vendor: true,
+    srcs: ["audio_hw.c"],
+    shared_libs: [
+        "liblog",
+        "libcutils",
+        "libhardware",
+        "libtinyalsa",
+        "libaudioutils",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+}

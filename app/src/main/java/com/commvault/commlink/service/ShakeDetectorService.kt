@@ -26,7 +26,7 @@ class ShakeDetectorService : Service(), SensorEventListener {
 
     private var lastShakeTimestamp = 0L
     private val shakeCooldownMs = 2000L // 2-second cooldown between detections
-    private val shakeThreshold = 12.0f // m/s² acceleration threshold
+    private val shakeThreshold = 18.0f // m/s² acceleration threshold (requires vigorous shake)
 
     private var lastX = 0f
     private var lastY = 0f

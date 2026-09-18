@@ -48,6 +48,7 @@ fun PasswordManagerScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     var accountName by remember { mutableStateOf("") }
+    var accountUsername by remember { mutableStateOf("") }
     var passwordSecret by remember { mutableStateOf("") }
     var accountCategory by remember { mutableStateOf("General") }
 
@@ -63,9 +64,15 @@ fun PasswordManagerScreen(
                 TextButton(
                     onClick = {
                         if (accountName.isNotBlank() && passwordSecret.isNotBlank()) {
-                            viewModel.savePasswordEntry(accountName, passwordSecret, accountCategory)
+                            viewModel.savePasswordEntry(
+                                name = accountName,
+                                username = accountUsername.takeIf { it.isNotBlank() },
+                                value = passwordSecret,
+                                category = accountCategory
+                            )
                             showAddDialog = false
                             accountName = ""
+                            accountUsername = ""
                             passwordSecret = ""
                             accountCategory = "General"
                         }
@@ -88,6 +95,18 @@ fun PasswordManagerScreen(
                         value = accountName,
                         onValueChange = { accountName = it },
                         label = { Text("Account Name (e.g. AD Login)", color = TextTertiary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LocalPrimaryColor.current,
+                            unfocusedBorderColor = BorderColor,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+                    OutlinedTextField(
+                        value = accountUsername,
+                        onValueChange = { accountUsername = it },
+                        label = { Text("Username / Email (Optional)", color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = LocalPrimaryColor.current,
@@ -308,9 +327,34 @@ fun PasswordManagerScreen(
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
+                                        
+                                        if (entry.username != null) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = entry.username,
+                                                    color = TextSecondary,
+                                                    fontSize = 12.sp
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(LocalPrimaryColor.current.copy(alpha = 0.1f))
+                                                        .clickable(enabled = isConnected) {
+                                                            viewModel.sendText(entry.username)
+                                                            Toast.makeText(context, "Username typed!", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text("PUSH", color = LocalPrimaryColor.current, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
+
                                         Text(
-                                            text = if (isConnected) "Tap to authenticate & type" else "Connect PC to type",
-                                            color = TextSecondary,
+                                            text = if (isConnected) "Tap to authenticate & type password" else "Connect PC to type",
+                                            color = TextTertiary,
                                             fontSize = 11.sp
                                         )
                                     }

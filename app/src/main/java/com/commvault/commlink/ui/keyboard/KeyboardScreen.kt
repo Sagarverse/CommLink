@@ -75,6 +75,21 @@ fun KeyboardScreen(
     val isTextPushing by viewModel.isTextPushing.collectAsState()
     val deviceName = (connectionState as? HidDeviceManager.ConnectionState.Connected)?.deviceName ?: "Workstation"
 
+    // Tab Content with HorizontalPager
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
+    
+    // Sync selectedTab with pager state
+    LaunchedEffect(selectedTab) {
+        if (pagerState.currentPage != selectedTab) {
+            pagerState.animateScrollToPage(selectedTab)
+        }
+    }
+    LaunchedEffect(pagerState.currentPage) {
+        if (selectedTab != pagerState.currentPage) {
+            selectedTab = pagerState.currentPage
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -129,47 +144,50 @@ fun KeyboardScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
 
-            // Tab Strip
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(LightSurfaceAlt)
-                    .padding(4.dp),
-            ) {
-                val tabs = listOf("Input", "Trackpad")
-                tabs.forEachIndexed { index, label ->
-                    val active = selectedTab == index
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(if (active) LocalPrimaryColor.current else Color.Transparent)
-                            .clickable { selectedTab = index }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (active) Color.White else TextSecondary,
-                        )
+                // Tab Strip
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(LightSurfaceAlt)
+                        .padding(4.dp),
+                ) {
+                    val tabs = listOf("Input", "Trackpad")
+                    tabs.forEachIndexed { index, label ->
+                        val active = selectedTab == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(if (active) LocalPrimaryColor.current else Color.Transparent)
+                                .clickable { selectedTab = index }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (active) Color.White else TextSecondary,
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // Tab Content
-            Box(modifier = Modifier.weight(1f)) {
-                when (selectedTab) {
-                    0 -> InputTab(viewModel)
-                    1 -> TrackpadSection(viewModel)
+                // Swipeable Pager Content
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f)
+                ) { page ->
+                    when (page) {
+                        0 -> InputTab(viewModel)
+                        1 -> TrackpadSection(viewModel)
+                    }
                 }
             }
         }
     }
-}
 }
 
 @Composable

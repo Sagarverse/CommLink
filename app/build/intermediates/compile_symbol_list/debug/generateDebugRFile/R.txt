@@ -2,7 +2,6 @@ int color ic_launcher_background 0x0
 int drawable commvault_logo 0x0
 int drawable h_logo 0x0
 int drawable ic_launcher_foreground 0x0
-int drawable laptop_device 0x0
 int drawable premium_device 0x0
 int drawable sagar_profile 0x0
 int mipmap ic_launcher 0x0

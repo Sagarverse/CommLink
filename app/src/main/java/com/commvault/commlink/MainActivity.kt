@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -71,8 +72,11 @@ import com.commvault.commlink.ui.about.AboutScreen
 import com.commvault.commlink.ui.assigned.AssignedWorksScreen
 import com.commvault.commlink.ui.chat.ChatScreen
 import com.commvault.commlink.ui.chat.ChatRoomScreen
-
+import com.commvault.commlink.ui.fileshare.FileShareScreen
+import com.commvault.commlink.ui.audiobridge.AudioBridgeScreen
 import com.commvault.commlink.ui.todo.TodoScreen
+import com.commvault.commlink.ui.shortcuts.ShortcutsScreen
+import com.commvault.commlink.ui.shortcuts.ShortcutBuilderScreen
 
 
 import com.commvault.commlink.ui.todo.TodoScreen
@@ -87,6 +91,7 @@ import androidx.lifecycle.lifecycleScope
 class MainActivity : androidx.fragment.app.FragmentActivity() {
 
     private val viewModel: CommLinkViewModel by viewModels()
+    private val shortcutsViewModel: com.commvault.commlink.ui.shortcuts.ShortcutsViewModel by viewModels()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -120,7 +125,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         onUnlock = { isUnlocked = true }
                     )
                 } else {
-                    AppNavigation(viewModel = viewModel)
+                    AppNavigation(viewModel = viewModel, shortcutsViewModel = shortcutsViewModel)
                 }
             }
         }
@@ -171,10 +176,26 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         viewModel.restoreOriginalMac()
         super.onDestroy()
     }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (viewModel.isPresentationModeActive.value) {
+            when (keyCode) {
+                android.view.KeyEvent.KEYCODE_VOLUME_UP -> {
+                    viewModel.sendPresentationNext()
+                    return true
+                }
+                android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    viewModel.sendPresentationPrev()
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 }
 
 @Composable
-fun AppNavigation(viewModel: CommLinkViewModel) {
+fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvault.commlink.ui.shortcuts.ShortcutsViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -236,6 +257,45 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                     Text("Later", color = com.commvault.commlink.ui.theme.TextSecondary)
                 }
             }
+        )
+    }
+
+    val macroPrompt by viewModel.macroPrompt.collectAsState()
+    if (macroPrompt != null) {
+        var inputText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelMacroPrompt() },
+            title = { Text("Input Required", color = com.commvault.commlink.ui.theme.TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(macroPrompt!!, color = com.commvault.commlink.ui.theme.TextSecondary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = com.commvault.commlink.ui.theme.BrandGreen,
+                            focusedTextColor = com.commvault.commlink.ui.theme.TextPrimary,
+                            unfocusedTextColor = com.commvault.commlink.ui.theme.TextPrimary
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.submitMacroPrompt(inputText) },
+                    colors = ButtonDefaults.buttonColors(containerColor = com.commvault.commlink.ui.theme.BrandGreen)
+                ) {
+                    Text("Submit")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelMacroPrompt() }) {
+                    Text("Cancel", color = com.commvault.commlink.ui.theme.TextSecondary)
+                }
+            },
+            containerColor = com.commvault.commlink.ui.theme.LightSurface
         )
     }
 
@@ -354,7 +414,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                         )
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Default.Chat, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
                             label = { Text("CommDrop", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "chat",
                             onClick = {
@@ -367,7 +427,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                         
                         DrawerSectionHeader("WORK")
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) },
                             label = { Text("Assigned Works", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "assigned_works",
                             onClick = {
@@ -378,7 +438,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                         )
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null) },
                             label = { Text("To-Do List", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "todo",
                             onClick = {
@@ -402,6 +462,17 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                         )
                         NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                            label = { Text("Shortcuts", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "shortcuts",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("shortcuts") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
                             icon = { Icon(Icons.Default.Notifications, contentDescription = "Alarms") },
                             label = { Text("Alarms", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "alarms",
@@ -415,7 +486,7 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                         
                         DrawerSectionHeader("SUPPORT & SETTINGS")
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Default.HelpCenter, contentDescription = null) },
+                            icon = { Icon(Icons.AutoMirrored.Filled.HelpCenter, contentDescription = null) },
                             label = { Text("Help Ping", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "help",
                             onClick = {
@@ -451,9 +522,9 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                     
-                    Divider(color = com.commvault.commlink.ui.theme.BorderLight)
+                    HorizontalDivider(color = com.commvault.commlink.ui.theme.BorderLight)
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
                         label = { Text("Log Out", fontWeight = FontWeight.Bold) },
                         selected = false,
                         onClick = {
@@ -516,6 +587,15 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
                 },
                 onNavigateToTodo = {
                     navController.navigate("todo") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToFileshare = {
+                    navController.navigate("fileshare") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToAudioBridge = {
+                    navController.navigate("audio_bridge") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToShortcuts = {
+                    navController.navigate("shortcuts") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
                 },
                 onCheckUpdates = {
                     autoUpdater.checkForUpdatesAndDownload()
@@ -615,6 +695,27 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
             )
         }
 
+        composable("fileshare") {
+            FileShareScreen(
+                viewModel = viewModel,
+                onBack = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+        composable("audio_bridge") {
+            AudioBridgeScreen(
+                onBack = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        }
+
         composable("assigned_works") {
             AssignedWorksScreen(
                 viewModel = viewModel,
@@ -675,6 +776,31 @@ fun AppNavigation(viewModel: CommLinkViewModel) {
         composable("alarms") {
             AlarmScreen(
                 viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("shortcuts") {
+            ShortcutsScreen(
+                commLinkViewModel = viewModel,
+                shortcutsViewModel = shortcutsViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToBuilder = { editId ->
+                    if (editId != null) {
+                        navController.navigate("shortcut_builder/$editId")
+                    } else {
+                        navController.navigate("shortcut_builder/new")
+                    }
+                }
+            )
+        }
+
+        composable("shortcut_builder/{editId}") { backStackEntry ->
+            val editId = backStackEntry.arguments?.getString("editId")?.takeIf { it != "new" }
+            ShortcutBuilderScreen(
+                commLinkViewModel = viewModel,
+                shortcutsViewModel = shortcutsViewModel,
+                editId = editId,
                 onBack = { navController.popBackStack() }
             )
         }

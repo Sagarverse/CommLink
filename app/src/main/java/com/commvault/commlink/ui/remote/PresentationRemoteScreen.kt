@@ -1,32 +1,29 @@
 package com.commvault.commlink.ui.remote
 
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.TvOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import com.commvault.commlink.ui.components.MacroControlBar
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.commvault.commlink.data.bluetooth.HidDeviceManager
-import com.commvault.commlink.domain.model.HidKeyCodes
 import com.commvault.commlink.ui.CommLinkViewModel
-import com.commvault.commlink.ui.theme.*
+import com.commvault.commlink.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,249 +31,176 @@ fun PresentationRemoteScreen(
     viewModel: CommLinkViewModel,
     onBack: () -> Unit
 ) {
-    val connectionState by viewModel.connectionState.collectAsState()
-    val isConnected = connectionState is HidDeviceManager.ConnectionState.Connected
-    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator }
+    val primaryColor = com.commvault.commlink.ui.theme.LocalPrimaryColor.current
+    
+    var showActionToast by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(showActionToast) {
+        if (showActionToast != null) {
+            delay(1000)
+            showActionToast = null
+        }
+    }
+    
+    DisposableEffect(Unit) {
+        viewModel.setPresentationModeActive(true)
+        onDispose {
+            viewModel.setPresentationModeActive(false)
+        }
+    }
+
+    fun vibrate(duration: Long = 30) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            vibrator.vibrate(duration)
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Presenter Remote", color = CommvaultNavy, fontWeight = FontWeight.Bold) },
+                title = { Text("Presentation Mode", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
-                    MacroControlBar(viewModel = viewModel)
+                    IconButton(onClick = { 
+                        viewModel.sendPresentationBlack()
+                        vibrate(50)
+                        showActionToast = "Black Screen"
+                    }) {
+                        Icon(Icons.Default.TvOff, contentDescription = "Black Screen", tint = Color.White)
+                    }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBg)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = primaryColor
+                )
             )
-        }
-    ) { paddingValues ->
+        },
+        containerColor = com.commvault.commlink.ui.theme.PageBackground
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LightBg)
-                .padding(paddingValues)
+                .padding(padding)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                // Connection banner warning
-                if (!isConnected) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 20.dp),
-                        color = ErrorRed.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = ErrorRed)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Workstation disconnected. Slides controller disabled.",
-                                color = TextSecondary,
-                                fontSize = 12.sp
+            // Main gesture area
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Left 40% - Previous Slide
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(0.4f)
+                        .background(Color.White)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    viewModel.sendPresentationPrev()
+                                    vibrate(20)
+                                    showActionToast = "Previous Slide"
+                                }
                             )
-                        }
-                    }
-                }
-
-
-
-            // Controller Surface Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                color = LightSurface,
-                shape = RoundedCornerShape(24.dp),
-                shadowElevation = 2.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceAround
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "SLIDES NAVIGATION",
-                        color = TextTertiary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
+                        "PREV",
+                        color = primaryColor.copy(alpha = 0.3f),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black
                     )
-
-                    // Big Navigation buttons
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Previous button
-                        PresenterLargeButton(
-                            modifier = Modifier.fillMaxWidth(0.85f),
-                            title = "PREVIOUS SLIDE",
-                            icon = Icons.AutoMirrored.Filled.NavigateBefore,
-                            enabled = isConnected,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.sendKey(HidKeyCodes.KEY_LEFT)
-                            }
-                        )
-
-                        // Next button
-                        PresenterLargeButton(
-                            modifier = Modifier
-                                .fillMaxWidth(0.85f)
-                                .height(120.dp),
-                            title = "NEXT SLIDE",
-                            icon = Icons.AutoMirrored.Filled.NavigateNext,
-                            accentColor = LocalPrimaryColor.current,
-                            enabled = isConnected,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.sendKey(HidKeyCodes.KEY_RIGHT)
-                            }
-                        )
-                    }
-
-                    // Bottom controls (F5, Esc, B)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        PresenterSmallUtilityButton(
-                            modifier = Modifier.weight(1f),
-                            title = "Start (F5)",
-                            icon = Icons.Default.PlayArrow,
-                            enabled = isConnected,
-                            onClick = {
-                                viewModel.sendKey(HidKeyCodes.KEY_F5)
-                            }
-                        )
-                        PresenterSmallUtilityButton(
-                            modifier = Modifier.weight(1f),
-                            title = "Exit (Esc)",
-                            icon = Icons.Default.Close,
-                            enabled = isConnected,
-                            onClick = {
-                                viewModel.sendKey(HidKeyCodes.KEY_ESC)
-                            }
-                        )
-                        PresenterSmallUtilityButton(
-                            modifier = Modifier.weight(1f),
-                            title = "Blackout (B)",
-                            icon = Icons.Default.VisibilityOff,
-                            enabled = isConnected,
-                            onClick = {
-                                viewModel.sendKey(HidKeyCodes.getHidCode('b').keyCode)
-                            }
-                        )
-                    }
                 }
-        }
-    }
-}
-}
-}
 
-@Composable
-fun PresenterLargeButton(
-    modifier: Modifier = Modifier,
-    title: String,
-    icon: ImageVector,
-    accentColor: Color = LightSurfaceAlt,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(80.dp)
-            .clickable(enabled = enabled) { onClick() },
-        color = if (enabled) accentColor else accentColor.copy(alpha = 0.3f),
-        shape = RoundedCornerShape(20.dp),
-        shadowElevation = if (enabled) 1.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (enabled) BorderColor else BorderColor.copy(alpha = 0.5f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (accentColor == LocalPrimaryColor.current && enabled) Color.White
-                       else if (enabled) TextPrimary else TextTertiary,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = title,
-                color = if (accentColor == LocalPrimaryColor.current && enabled) Color.White
-                       else if (enabled) TextPrimary else TextTertiary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-        }
-    }
-}
+                // Divider
+                Box(modifier = Modifier.fillMaxHeight().width(2.dp).background(com.commvault.commlink.ui.theme.BorderColor))
 
-@Composable
-fun PresenterSmallUtilityButton(
-    modifier: Modifier = Modifier,
-    title: String,
-    icon: ImageVector,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(60.dp)
-            .clickable(enabled = enabled) { onClick() },
-        color = if (enabled) LightSurfaceAlt else LightSurfaceAlt.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(14.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (enabled) BorderColor else BorderColor.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(4.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (enabled) TextSecondary else TextTertiary,
-                modifier = Modifier.size(16.dp)
+                // Right 60% - Next Slide
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(0.6f)
+                        .background(Color.White)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    viewModel.sendPresentationNext()
+                                    vibrate(40) // Slightly longer vibration for NEXT to differentiate blindly
+                                    showActionToast = "Next Slide"
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "NEXT",
+                        color = primaryColor.copy(alpha = 0.5f),
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+            
+            // Invisible swipe detector over everything for Start/Stop
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        var swipeOffsetY = 0f
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (swipeOffsetY < -200) { // Swipe Up
+                                    viewModel.sendPresentationStart()
+                                    vibrate(60)
+                                    showActionToast = "Start Presentation (F5)"
+                                } else if (swipeOffsetY > 200) { // Swipe Down
+                                    viewModel.sendPresentationEnd()
+                                    vibrate(60)
+                                    showActionToast = "End Presentation (Esc)"
+                                }
+                                swipeOffsetY = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                swipeOffsetY += dragAmount.y
+                            }
+                        )
+                    }
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                color = if (enabled) TextSecondary else TextTertiary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+
+            // Hints overlay
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+                    .alpha(0.6f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Swipe Up to Start • Swipe Down to Stop", fontSize = 12.sp, color = TextSecondary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Tap Left side for Prev • Tap Right side for Next", fontSize = 12.sp, color = TextSecondary)
+            }
+            
+            // Toast overlay
+            if (showActionToast != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.7f), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = showActionToast!!,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }

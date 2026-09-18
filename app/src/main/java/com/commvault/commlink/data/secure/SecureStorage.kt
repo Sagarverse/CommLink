@@ -22,6 +22,12 @@ class SecureStorage(private val context: Context) {
         }
     }
 
+    init {
+        // Eagerly initialize EncryptedSharedPreferences on a background thread
+        // so the first read doesn't block the main thread and cause ANR
+        Thread { prefs }.start()
+    }
+
     fun saveCommvaultEmail(email: String) {
         prefs.edit().putString(KEY_EMAIL, email).apply()
     }

@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +64,7 @@ class AutoUpdater(private val context: Context) {
                 try {
                     context.unregisterReceiver(this)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("AutoUpdater", "Failed to unregister receiver", e)
                 }
             }
         }
@@ -87,7 +88,7 @@ class AutoUpdater(private val context: Context) {
             
             context.startActivity(installIntent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AutoUpdater", "Failed to start installer", e)
             Toast.makeText(context, "Failed to start installer", Toast.LENGTH_SHORT).show()
         }
     }

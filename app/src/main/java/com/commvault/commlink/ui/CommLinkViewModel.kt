@@ -42,6 +42,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     private val networkManager = CommLinkNetworkManager.getInstance(application)
 
     // Connection Flow
+    val connectionMode: StateFlow<HidDeviceManager.ConnectionMode> = hidDeviceManager.connectionMode
     val connectionState: StateFlow<HidDeviceManager.ConnectionState> = hidDeviceManager.connectionState
     val activeModifiers: StateFlow<Byte> = hidDeviceManager.activeModifiers
     val isTextPushing: StateFlow<Boolean> = hidDeviceManager.isTextPushing
@@ -138,8 +139,10 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         // Apply initial typing speed to HidDeviceManager
         hidDeviceManager.typingDelay = _typingSpeed.value
         loadMockAssignedWorks()
-        loadChatMessages()
-        loadAlarms()
+        // Move heavy I/O (encrypted prefs + Gson) off main thread to prevent ANR
+        viewModelScope.launch(Dispatchers.IO) {
+            loadChatMessages()
+        }
     }
 
     private fun loadMockAssignedWorks() {
@@ -209,9 +212,17 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         hidDeviceManager.typingDelay = speedMs
     }
 
+    fun setConnectionMode(mode: HidDeviceManager.ConnectionMode) {
+        hidDeviceManager.setConnectionMode(mode)
+    }
+
     // Keep Alive Status
     private val _isKeepAliveActive = MutableStateFlow(false)
-    val isKeepAliveActive: StateFlow<Boolean> = _isKeepAliveActive.asStateFlow()
+    val isKeepAliveActive: StateFlow<Boolean> = _isKeepAliveActive
+    
+    private val _trackpadSensitivity = MutableStateFlow(1.8f)
+    val trackpadSensitivity: StateFlow<Float> = _trackpadSensitivity
+
     private var keepAliveJob: Job? = null
 
     // DuckyScript Interpreter Running State
@@ -220,6 +231,18 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
 
     private val _isMacroPaused = MutableStateFlow(false)
     val isMacroPaused: StateFlow<Boolean> = _isMacroPaused.asStateFlow()
+
+    private val _isPresentationModeActive = MutableStateFlow(false)
+    val isPresentationModeActive: StateFlow<Boolean> = _isPresentationModeActive
+
+    fun setPresentationModeActive(active: Boolean) {
+        _isPresentationModeActive.value = active
+    }
+
+    private val _macroPrompt = MutableStateFlow<String?>(null)
+    val macroPrompt: StateFlow<String?> = _macroPrompt.asStateFlow()
+    private var macroPromptDeferred: kotlinx.coroutines.CompletableDeferred<String>? = null
+
     private var macroJob: Job? = null
 
     // Snippets list
@@ -231,10 +254,13 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     val passwordEntries: StateFlow<List<PasswordEntry>> = _passwordEntries.asStateFlow()
 
     init {
-        loadSnippets()
-        loadPasswordEntries()
-        loadAlarms()
-        loadTodos()
+        // Move heavy I/O (encrypted prefs + Gson) off main thread to prevent ANR
+        viewModelScope.launch(Dispatchers.IO) {
+            loadSnippets()
+            loadPasswordEntries()
+            loadAlarms()
+            loadTodos()
+        }
         setupNetworkListener()
         if (_isLoggedIn.value) {
             attemptAutoConnect()
@@ -287,7 +313,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
             delay(2000)
             
             while (isActive) {
-                if (_isAutoConnectEnabled.value && connectionState.value is HidDeviceManager.ConnectionState.Disconnected) {
+                if (_isAutoConnectEnabled.value && connectionState.value is HidDeviceManager.ConnectionState.Disconnected && hidDeviceManager.connectionMode.value == HidDeviceManager.ConnectionMode.BLUETOOTH) {
                     val devices = savedDevices.value
                     if (devices.isNotEmpty()) {
                         val lastDevice = devices.first() // List is sorted by lastConnected descending
@@ -369,11 +395,17 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         _isKeepAliveActive.value = true
         keepAliveJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive && _isKeepAliveActive.value) {
-                // Send a Shift key press every 50 seconds to keep office laptop awake
-                sendKey(com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_SHIFT)
+                // Send a microscopic mouse jiggle to keep PC awake
+                sendMouseMove(1f, 1f)
+                delay(50L)
+                sendMouseMove(-1f, -1f)
                 delay(50000L)
             }
         }
+    }
+
+    fun setTrackpadSensitivity(value: Float) {
+        _trackpadSensitivity.value = value
     }
 
     private fun stopKeepAlive() {
@@ -409,10 +441,34 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                         "ENTER" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_ENTER)
                         "TAB" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_TAB)
                         "SPACE" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_SPACE)
+                        "ESCAPE", "ESC" -> sendKey(0x29.toByte())
+                        "BACKSPACE" -> sendKey(0x2A.toByte())
+                        "DELETE", "DEL" -> sendKey(0x4C.toByte())
+                        "CAPSLOCK" -> sendKey(0x39.toByte())
+                        "PRINTSCREEN" -> sendKey(0x46.toByte())
+                        "SCROLLLOCK" -> sendKey(0x47.toByte())
+                        "PAUSE", "BREAK" -> sendKey(0x48.toByte())
+                        "INSERT" -> sendKey(0x49.toByte())
+                        "HOME" -> sendKey(0x4A.toByte())
+                        "END" -> sendKey(0x4D.toByte())
+                        "PAGEUP" -> sendKey(0x4B.toByte())
+                        "PAGEDOWN" -> sendKey(0x4E.toByte())
                         "UP", "UPARROW" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_UP)
                         "DOWN", "DOWNARROW" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_DOWN)
                         "LEFT", "LEFTARROW" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_LEFT)
                         "RIGHT", "RIGHTARROW" -> sendKey(com.commvault.commlink.domain.model.HidKeyCodes.KEY_RIGHT)
+                        "F1" -> sendKey(0x3A.toByte())
+                        "F2" -> sendKey(0x3B.toByte())
+                        "F3" -> sendKey(0x3C.toByte())
+                        "F4" -> sendKey(0x3D.toByte())
+                        "F5" -> sendKey(0x3E.toByte())
+                        "F6" -> sendKey(0x3F.toByte())
+                        "F7" -> sendKey(0x40.toByte())
+                        "F8" -> sendKey(0x41.toByte())
+                        "F9" -> sendKey(0x42.toByte())
+                        "F10" -> sendKey(0x43.toByte())
+                        "F11" -> sendKey(0x44.toByte())
+                        "F12" -> sendKey(0x45.toByte())
                         "GUI", "WINDOWS", "WIN" -> {
                             val key = parseDuckyKey(arg)
                             sendKey(key, com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_GUI)
@@ -428,6 +484,48 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                         "SHIFT" -> {
                             val key = parseDuckyKey(arg)
                             sendKey(key, com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_SHIFT)
+                        }
+                        "MEDIA" -> {
+                            // Consumer control media keys via HID consumer report
+                            when (arg.uppercase()) {
+                                "PLAYPAUSE" -> hidDeviceManager.sendConsumerKey(0xCD.toShort())
+                                "NEXT" -> hidDeviceManager.sendConsumerKey(0xB5.toShort())
+                                "PREV" -> hidDeviceManager.sendConsumerKey(0xB6.toShort())
+                                "VOL_UP" -> hidDeviceManager.sendConsumerKey(0xE9.toShort())
+                                "VOL_DOWN" -> hidDeviceManager.sendConsumerKey(0xEA.toShort())
+                                "MUTE" -> hidDeviceManager.sendConsumerKey(0xE2.toShort())
+                            }
+                        }
+                        "MOUSE_CLICK" -> {
+                            val btnStr = arg.trim().uppercase()
+                            val btn = when (btnStr) {
+                                "LEFT", "1" -> 1
+                                "RIGHT", "2" -> 2
+                                "MIDDLE", "4" -> 4
+                                else -> 1
+                            }
+                            sendMouseMove(0f, 0f, buttons = btn)
+                            delay(40)
+                            sendMouseMove(0f, 0f, buttons = 0)
+                        }
+                        "MOUSE_MOVE" -> {
+                            val coords = arg.split(",").map { it.trim().toFloatOrNull() ?: 0f }
+                            if (coords.size >= 2) sendMouseMove(coords[0], coords[1])
+                        }
+                        "MOUSE_SCROLL" -> {
+                            val amount = arg.toIntOrNull() ?: 0
+                            sendMouseMove(0f, 0f, wheel = amount)
+                        }
+                        "ASK_INPUT" -> {
+                            val deferred = kotlinx.coroutines.CompletableDeferred<String>()
+                            macroPromptDeferred = deferred
+                            _macroPrompt.value = arg.ifBlank { "Enter value:" }
+                            val userInput = deferred.await()
+                            _macroPrompt.value = null
+                            macroPromptDeferred = null
+                            if (userInput.isNotEmpty()) {
+                                hidDeviceManager.sendText(userInput)?.join()
+                            }
                         }
                     }
                     delay(10L)
@@ -456,6 +554,17 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         macroJob = null
         _isMacroRunning.value = false
         _isMacroPaused.value = false
+        _macroPrompt.value = null
+        macroPromptDeferred?.cancel()
+        macroPromptDeferred = null
+    }
+
+    fun submitMacroPrompt(input: String) {
+        macroPromptDeferred?.complete(input)
+    }
+
+    fun cancelMacroPrompt() {
+        stopMacro()
     }
 
     private fun parseDuckyKey(arg: String): Byte {
@@ -543,6 +652,14 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     fun sendMediaVolumeDown() = hidDeviceManager.sendMediaKey(0x20) // Bit 5
     fun sendMediaMute() = hidDeviceManager.sendMediaKey(0x10) // Bit 4
 
+    // Presentation mode helpers
+    fun sendPresentationNext() = hidDeviceManager.sendKeyPress(com.commvault.commlink.domain.model.HidKeyCodes.KEY_RIGHT, useSticky = false)
+    fun sendPresentationPrev() = hidDeviceManager.sendKeyPress(com.commvault.commlink.domain.model.HidKeyCodes.KEY_LEFT, useSticky = false)
+    fun sendPresentationStart() = hidDeviceManager.sendKeyPress(0x3E.toByte(), useSticky = false) // F5
+    fun sendPresentationEnd() = hidDeviceManager.sendKeyPress(com.commvault.commlink.domain.model.HidKeyCodes.KEY_ESC, useSticky = false)
+    fun sendPresentationBlack() = hidDeviceManager.sendKeyPress(com.commvault.commlink.domain.model.HidKeyCodes.KEY_B, useSticky = false)
+    fun sendPresentationWhite() = hidDeviceManager.sendKeyPress(com.commvault.commlink.domain.model.HidKeyCodes.KEY_W, useSticky = false)
+
     fun toggleModifier(modifier: Byte) {
         val current = hidDeviceManager.activeModifiers.value
         val isSet = (current.toInt() and modifier.toInt()) != 0
@@ -595,6 +712,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                     PasswordEntry(
                         id = o.getString("id"),
                         name = o.getString("name"),
+                        username = o.optString("username", null),
                         value = o.getString("value"),
                         category = o.optString("category", "General")
                     )
@@ -606,11 +724,11 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun savePasswordEntry(name: String, value: String, category: String) {
+    fun savePasswordEntry(name: String, username: String?, value: String, category: String) {
         val current = _passwordEntries.value.toMutableList()
         current.removeAll { it.name.equals(name, ignoreCase = true) }
         val id = java.util.UUID.randomUUID().toString()
-        current.add(PasswordEntry(id, name, value, category))
+        current.add(PasswordEntry(id, name, username, value, category))
         persistPasswordEntries(current)
     }
 
@@ -626,6 +744,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
             arr.put(org.json.JSONObject().apply {
                 put("id", p.id)
                 put("name", p.name)
+                if (p.username != null) put("username", p.username)
                 put("value", p.value)
                 put("category", p.category)
             })
@@ -679,7 +798,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                 saveChatMessages()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("CommLinkViewModel", "Failed to load chat messages", e)
             _chatMessages.value = emptyList()
         }
     }
@@ -1155,7 +1274,9 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     val hydrationReminders: StateFlow<List<com.commvault.commlink.domain.model.HydrationReminder>> = _hydrationReminders.asStateFlow()
 
     init {
-        loadHydrationReminders()
+        viewModelScope.launch(Dispatchers.IO) {
+            loadHydrationReminders()
+        }
     }
 
     private fun loadHydrationReminders() {
@@ -1457,23 +1578,28 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
             delay(2000)
             while (isActive && _isAutoLockEnabled.value) {
                 if (connectionState.value is com.commvault.commlink.data.bluetooth.HidDeviceManager.ConnectionState.Connected) {
-                    val startTime = System.currentTimeMillis()
-                    val success = hidDeviceManager.sendMouseReportWithResult(0f, 0f, 0, 0)
-                    val rtt = System.currentTimeMillis() - startTime
+                    var maxRtt = 0L
+                    var pingSuccess = true
+                    // Burst ping to fill OS buffer slightly and accurately measure RTT blocking when walking away
+                    for (i in 1..3) {
+                        val startTime = System.currentTimeMillis()
+                        val success = hidDeviceManager.sendMouseReportWithResult(0f, 0f, 0, 0)
+                        val rtt = System.currentTimeMillis() - startTime
+                        if (rtt > maxRtt) maxRtt = rtt
+                        if (!success) pingSuccess = false
+                    }
                     
-                    if (success) {
-                        // Update UI signal strength (roughly mapping RTT to %)
-                        val percentage = (100 - (rtt / 5)).toInt().coerceIn(0, 100)
+                    if (pingSuccess) {
+                        val percentage = (100 - (maxRtt * 2)).toInt().coerceIn(0, 100)
                         _currentSignalStrength.value = percentage
                         
-                        // Estimate distance by latency. If RTT is high (retransmissions), signal is weak.
-                        // thresholdMs range: 50ms (Near) to 350ms (Far)
-                        val thresholdMs = 50 + (_autoLockDistanceThreshold.value * 300).toLong()
+                        // thresholdMs range: 10ms (Near) to 100ms (Far)
+                        val thresholdMs = 10 + (_autoLockDistanceThreshold.value * 90).toLong()
                         
-                        if (rtt > thresholdMs) {
+                        if (maxRtt > thresholdMs) {
                             val now = System.currentTimeMillis()
                             if (now - lastAutoLockTime > autoLockCooldownMs) {
-                                Log.d("AutoLock", "High latency ($rtt ms > $thresholdMs ms). Locking PC.")
+                                android.util.Log.d("AutoLock", "High latency burst ($maxRtt ms > $thresholdMs ms). Locking PC.")
                                 hidDeviceManager.sendKeyPress(
                                     com.commvault.commlink.domain.model.HidKeyCodes.KEY_L,
                                     com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_GUI,
@@ -1483,10 +1609,9 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                             }
                         }
                     } else {
-                        // Option A: Ping failed (Disconnecting). Try to lock immediately!
                         val now = System.currentTimeMillis()
                         if (now - lastAutoLockTime > autoLockCooldownMs) {
-                            Log.d("AutoLock", "Ping Failed. Attempting to lock PC before disconnect.")
+                            android.util.Log.d("AutoLock", "Ping Failed. Attempting to lock PC before disconnect.")
                             hidDeviceManager.sendKeyPress(
                                 com.commvault.commlink.domain.model.HidKeyCodes.KEY_L,
                                 com.commvault.commlink.domain.model.HidKeyCodes.MODIFIER_LEFT_GUI,
@@ -1499,7 +1624,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
                 } else {
                     _currentSignalStrength.value = 0
                 }
-                delay(3000)
+                delay(1000) // Poll more frequently to catch drops before link supervision timeout
             }
         }
     }
@@ -1536,6 +1661,7 @@ data class TextSnippet(
 data class PasswordEntry(
     val id: String,
     val name: String,
+    val username: String? = null,
     val value: String,
     val category: String = "General"
 )

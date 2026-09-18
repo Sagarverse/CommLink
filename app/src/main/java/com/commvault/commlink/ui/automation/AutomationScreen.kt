@@ -24,11 +24,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.commvault.commlink.ui.components.MacroControlBar
-import com.commvault.commlink.ui.components.CeramicCard
 import com.commvault.commlink.data.bluetooth.HidDeviceManager
 import com.commvault.commlink.ui.CommLinkViewModel
 import com.commvault.commlink.ui.theme.*
+import androidx.compose.ui.draw.shadow
+
+// ── ULTRA MODERN UI CONSTANTS ──
+private val PageBg = Color(0xFFF4F7FB)
+private val SurfaceCard = Color(0xFFFFFFFF)
+private val SurfaceCardLight = Color(0xFFF8FAFC)
+private val TextTitle = Color(0xFF0F172A)
+private val TextSub = Color(0xFF64748B)
+private val BentoRadiusLg = 32.dp
+private val BentoRadiusMd = 24.dp
+private val BentoRadiusSm = 16.dp
+private val ShadowColor = Color(0xFF334155).copy(alpha = 0.08f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,23 +61,23 @@ fun AutomationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Automation Hub", color = CommvaultNavy, fontWeight = FontWeight.Bold) },
+                title = { Text("Automation Hub", color = TextTitle, fontWeight = FontWeight.Black, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextTitle)
                     }
                 },
                 actions = {
-                    MacroControlBar(viewModel = viewModel)
+                    // MacroControlBar(viewModel = viewModel)
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBg)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PageBg)
             )
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LightBg)
+                .background(PageBg)
                 .padding(paddingValues)
         ) {
             Column(
@@ -102,58 +112,63 @@ fun AutomationScreen(
                 }
 
                 // Keep Alive Status
-                CeramicCard(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 24.dp)
+                        .shadow(4.dp, RoundedCornerShape(BentoRadiusMd), spotColor = ShadowColor)
+                        .clip(RoundedCornerShape(BentoRadiusMd))
+                        .background(SurfaceCard)
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(44.dp)
                                     .background(
-                                        if (isKeepAliveActive) SuccessTeal.copy(alpha = 0.1f) else LightSurfaceAlt,
-                                        RoundedCornerShape(10.dp)
+                                        if (isKeepAliveActive) Color(0xFF10B981).copy(alpha = 0.15f) else SurfaceCardLight,
+                                        RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Bedtime, 
                                     contentDescription = null, 
-                                    tint = if (isKeepAliveActive) SuccessTeal else TextTertiary,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = if (isKeepAliveActive) Color(0xFF10B981) else TextSub,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                             
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             
                             Column {
                                 Text(
-                                    text = "Anti-Sleep / Keep-Alive",
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
+                                    text = "Anti-Sleep",
+                                    color = TextTitle,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = if (isKeepAliveActive) "Simulating user activity..." else "Disabled",
-                                    color = if (isKeepAliveActive) SuccessTeal else TextTertiary,
-                                    fontSize = 11.sp
+                                    text = if (isKeepAliveActive) "Jiggling mouse..." else "Disabled",
+                                    color = if (isKeepAliveActive) Color(0xFF10B981) else TextSub,
+                                    fontSize = 12.sp
                                 )
                             }
                         }
+                        
+                        Spacer(modifier = Modifier.weight(1f))
                         
                         Switch(
                             checked = isKeepAliveActive,
                             onCheckedChange = { viewModel.toggleKeepAlive() },
                             enabled = isConnected,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = SuccessTeal,
-                                checkedTrackColor = SuccessTeal.copy(alpha = 0.3f)
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF10B981)
                             )
                         )
                     }
@@ -257,8 +272,12 @@ fun AutomationScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
-                CeramicCard(
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(8.dp, RoundedCornerShape(BentoRadiusMd), spotColor = ShadowColor)
+                        .clip(RoundedCornerShape(BentoRadiusMd))
+                        .background(SurfaceCard)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -275,8 +294,8 @@ fun AutomationScreen(
                             if (customScript.isNotBlank()) {
                                 Text(
                                     text = "Auto-saved",
-                                    color = SuccessTeal,
-                                    fontSize = 10.sp,
+                                    color = Color(0xFF10B981),
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -299,10 +318,10 @@ fun AutomationScreen(
                                 ) 
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LocalPrimaryColor.current,
-                                unfocusedBorderColor = BorderColor,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary
+                                focusedBorderColor = Color(0xFF3B82F6),
+                                unfocusedBorderColor = SurfaceCardLight,
+                                focusedTextColor = TextTitle,
+                                unfocusedTextColor = TextTitle
                             ),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -312,7 +331,7 @@ fun AutomationScreen(
                             enabled = isConnected && !isMacroRunning && customScript.isNotBlank(),
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = LocalPrimaryColor.current)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                         ) {
                             if (isMacroRunning) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
@@ -340,42 +359,46 @@ fun MacroButton(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
-    CeramicCard(
-        modifier = modifier.heightIn(min = 90.dp),
-        onClick = if (enabled) onClick else null
+    Box(
+        modifier = modifier
+            .heightIn(min = 90.dp)
+            .shadow(4.dp, RoundedCornerShape(BentoRadiusMd), spotColor = ShadowColor)
+            .clip(RoundedCornerShape(BentoRadiusMd))
+            .background(SurfaceCard)
+            .clickable(enabled = enabled, onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(44.dp)
                     .background(
-                        if (enabled) LocalPrimaryColor.current.copy(alpha = 0.12f) else Color.Gray.copy(alpha = 0.05f),
-                        RoundedCornerShape(10.dp)
+                        if (enabled) Color(0xFF3B82F6).copy(alpha = 0.12f) else SurfaceCardLight,
+                        RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (enabled) LocalPrimaryColor.current else Color.Gray.copy(alpha = 0.3f),
-                    modifier = Modifier.size(20.dp)
+                    tint = if (enabled) Color(0xFF3B82F6) else TextSub.copy(alpha = 0.3f),
+                    modifier = Modifier.size(24.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
                     text = title,
-                    color = if (enabled) TextPrimary else TextTertiary,
-                    fontSize = 13.sp,
+                    color = if (enabled) TextTitle else TextSub,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = subtitle,
-                    color = TextTertiary,
-                    fontSize = 10.sp
+                    color = TextSub,
+                    fontSize = 12.sp
                 )
             }
         }
