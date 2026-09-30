@@ -50,8 +50,8 @@ fun AgentScreen(
 ) {
     val context = LocalContext.current
     val messages by agentViewModel.messages.collectAsState()
-    val agentStatus by agentViewModel.agentStatus.collectAsState()
     val isRunning by agentViewModel.isRunning.collectAsState()
+    val currentStatus by agentViewModel.currentStatus.collectAsState()
     val isAccessibilityEnabled = agentViewModel.isAccessibilityEnabled(context)
 
     val primary = LocalPrimaryColor.current
@@ -59,12 +59,6 @@ fun AgentScreen(
 
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-
-    // Register for status broadcasts
-    DisposableEffect(Unit) {
-        agentViewModel.registerStatusReceiver(context)
-        onDispose { agentViewModel.unregisterStatusReceiver(context) }
-    }
 
     // Auto scroll to bottom
     LaunchedEffect(messages.size) {
