@@ -77,6 +77,7 @@ fun DashboardScreen(
     onNavigateToFileshare: () -> Unit,
     onNavigateToShortcuts: () -> Unit,
     onNavigateToAiAssistant: () -> Unit = {},
+    onNavigateToAgent: () -> Unit = {},
     onCheckUpdates: () -> Unit
 ) {
     val context = LocalContext.current
@@ -320,7 +321,8 @@ fun DashboardScreen(
                         .background(SurfaceCard)
                 ) {
                     val tools = listOf(
-                        Triple("AI Assistant (GPT4All)", Icons.Default.AutoAwesome, onNavigateToAiAssistant),
+                        Triple("AI Assistant", Icons.Default.AutoAwesome, onNavigateToAiAssistant),
+                        Triple("🤖 AI Agent (Autonomous)", Icons.Default.SmartToy, onNavigateToAgent),
                         Triple("Shortcuts", Icons.Default.Bolt, onNavigateToShortcuts),
                         Triple("Snippets", Icons.Default.Description, onNavigateToSnippets),
                         Triple("Automation", Icons.Default.SettingsSuggest, onNavigateToAutomation),

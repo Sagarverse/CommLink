@@ -25,6 +25,7 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="true"/>
 
     <application
@@ -138,6 +139,20 @@
         <receiver
             android:name="com.commvault.commlink.receiver.HydrationReminderReceiver"
             android:exported="false" />
+
+        <!-- AI Agent Accessibility Service -->
+        <service
+            android:name="com.commvault.commlink.agent.CommLinkAccessibilityService"
+            android:exported="true"
+            android:label="CommLink AI Agent"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
     </application>
 

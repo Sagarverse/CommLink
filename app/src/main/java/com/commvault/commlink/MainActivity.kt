@@ -77,6 +77,7 @@ import com.commvault.commlink.ui.todo.TodoScreen
 import com.commvault.commlink.ui.shortcuts.ShortcutsScreen
 import com.commvault.commlink.ui.shortcuts.ShortcutBuilderScreen
 import com.commvault.commlink.ui.assistant.Gpt4AllAssistantScreen
+import com.commvault.commlink.agent.AgentScreen
 import com.commvault.commlink.ui.help.HelpScreen
 import com.commvault.commlink.ui.components.BiometricLockOverlay
 import com.commvault.commlink.ui.theme.CommLinkTheme
@@ -606,6 +607,9 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
                 onNavigateToAiAssistant = {
                     navController.navigate("gpt4all_assistant") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
                 },
+                onNavigateToAgent = {
+                    navController.navigate("agent") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
                 onCheckUpdates = {
                     autoUpdater.checkForUpdatesAndDownload()
                 }
@@ -815,6 +819,16 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
                 },
                 onOpenDrawer = {
                     scope.launch { drawerState.open() }
+                }
+            )
+        }
+
+        composable("agent") {
+            AgentScreen(
+                onBack = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
                 }
             )
         }

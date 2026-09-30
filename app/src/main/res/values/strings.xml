@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CommLink</string>
+    <string name="accessibility_service_description">CommLink AI Agent uses accessibility to autonomously control your phone based on your voice and text commands. It can open apps, type messages, tap buttons, and navigate the UI.</string>
 </resources>
