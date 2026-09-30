@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,7 +76,10 @@ fun SettingsScreen(
 
     // Smart Features states
     val isShakeToLaunchEnabled by viewModel.isShakeToLaunchEnabled.collectAsState()
+    val isVoiceAssistantEnabled by viewModel.isVoiceAssistantEnabled.collectAsState()
+    val isPowerButtonLockEnabled by viewModel.isPowerButtonLockEnabled.collectAsState()
     val isAutoLockEnabled by viewModel.isAutoLockEnabled.collectAsState()
+    val isPersistentNotificationEnabled by viewModel.isPersistentNotificationEnabled.collectAsState()
     val currentSignalStrength by viewModel.currentSignalStrength.collectAsState()
     val autoLockDistanceThreshold by viewModel.autoLockDistanceThreshold.collectAsState()
 
@@ -246,6 +250,16 @@ fun SettingsScreen(
             // System Settings Group
             SettingsGroupTitle("SYSTEM & PERFORMANCE")
             
+            SettingsToggleRow(
+                title = "Persistent Notification",
+                subtitle = "Keep service alive in background (turning off may cause disconnections)",
+                icon = Icons.Default.Lock,
+                checked = isPersistentNotificationEnabled,
+                onCheckedChange = { viewModel.setPersistentNotificationEnabled(it) }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             SettingsActionRow(
                 title = "Battery Optimization",
                 subtitle = if (isIgnoringBatteryOptimizations) "Unrestricted (Recommended)" else "Restricted (May cause disconnects)",
@@ -290,6 +304,37 @@ fun SettingsScreen(
                         viewModel.setShakeToLaunchEnabled(isEnabled)
                     }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsToggleRow(
+                title = "Voice Assistant (Long Press Power)",
+                subtitle = "Set CommLink as default assistant to use voice commands to unlock/lock PC.",
+                icon = androidx.compose.material.icons.Icons.Default.PhoneAndroid,
+                checked = isVoiceAssistantEnabled,
+                onCheckedChange = { isEnabled ->
+                    viewModel.setVoiceAssistantEnabled(isEnabled)
+                    if (isEnabled) {
+                        try {
+                            val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
+                            context.startActivity(intent)
+                            Toast.makeText(context, "Please set CommLink as your Default Digital Assistant.", Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Search for 'Default Assistant' in your phone Settings.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsToggleRow(
+                title = "Power Button → Lock PC",
+                subtitle = "Pressing your phone's power button will instantly lock the connected PC (Win+L).",
+                icon = Icons.Default.PowerSettingsNew,
+                checked = isPowerButtonLockEnabled,
+                onCheckedChange = { viewModel.setPowerButtonLockEnabled(it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))

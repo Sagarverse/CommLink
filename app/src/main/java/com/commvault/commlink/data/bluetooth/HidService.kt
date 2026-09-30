@@ -35,17 +35,20 @@ class HidService : Service() {
         hidDeviceManager = HidDeviceManager.getInstance(this)
 
         createNotificationChannel()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                1, 
-                buildNotification("Disconnected", "Bluetooth HID connection is inactive."),
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            )
-        } else {
-            startForeground(1, buildNotification("Disconnected", "Bluetooth HID connection is inactive."))
+        val prefs = getSharedPreferences("commlink_settings", Context.MODE_PRIVATE)
+        val showNotification = prefs.getBoolean("persistent_notification", true)
+
+        if (showNotification) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    1, 
+                    buildNotification("Disconnected", "Bluetooth HID connection is inactive."),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                )
+            } else {
+                startForeground(1, buildNotification("Disconnected", "Bluetooth HID connection is inactive."))
+            }
         }
-        
         observeConnectionState()
     }
 
@@ -81,11 +84,20 @@ class HidService : Service() {
                 hidDeviceManager.lockWindows()
                 Toast.makeText(this, "Lock command sent", Toast.LENGTH_SHORT).show()
             }
-            "UNLOCK_WINDOWS" -> {
+            "UNLOCK_WINDOWS", "UNLOCK_WINDOWS_NORMAL" -> {
+                val password = SecureStorage(applicationContext).getCommvaultPassword() ?: ""
+                if (password.isNotEmpty()) {
+                    hidDeviceManager.unlockWindows(password, wakeScreenFirst = true)
+                    Toast.makeText(this, "Unlocking Windows (Normal)...", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Save password in dashboard first", Toast.LENGTH_SHORT).show()
+                }
+            }
+            "UNLOCK_WINDOWS_DIRECT" -> {
                 val password = SecureStorage(applicationContext).getCommvaultPassword() ?: ""
                 if (password.isNotEmpty()) {
                     hidDeviceManager.unlockWindows(password, wakeScreenFirst = false)
-                    Toast.makeText(this, "Unlocking Windows...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Unlocking Windows (Direct)...", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Save password in dashboard first", Toast.LENGTH_SHORT).show()
                 }
@@ -94,6 +106,22 @@ class HidService : Service() {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 android.os.Process.killProcess(android.os.Process.myPid())
+            }
+            "UPDATE_FOREGROUND" -> {
+                val showNotification = getSharedPreferences("commlink_settings", Context.MODE_PRIVATE).getBoolean("persistent_notification", true)
+                if (showNotification) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        startForeground(1, buildNotification(notificationStateTitle, notificationStateText), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+                    } else {
+                        startForeground(1, buildNotification(notificationStateTitle, notificationStateText))
+                    }
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    } else {
+                        stopForeground(true)
+                    }
+                }
             }
         }
         return START_STICKY
@@ -127,7 +155,7 @@ class HidService : Service() {
         val lockIntent = Intent(this, HidService::class.java).apply { action = "LOCK_WINDOWS" }
         val lockPending = PendingIntent.getService(this, 10, lockIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val unlockIntent = Intent(this, HidService::class.java).apply { action = "UNLOCK_WINDOWS" }
+        val unlockIntent = Intent(this, HidService::class.java).apply { action = "UNLOCK_WINDOWS_NORMAL" }
         val unlockPending = PendingIntent.getService(this, 20, unlockIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val stopIntent = Intent(this, HidService::class.java).apply { action = "STOP_APP" }
@@ -142,8 +170,8 @@ class HidService : Service() {
             .setAutoCancel(false)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             
-        builder.addAction(android.R.drawable.ic_lock_idle_lock, "Unlock", unlockPending)
-        builder.addAction(android.R.drawable.ic_lock_lock, "Lock", lockPending)
+        builder.addAction(com.commvault.commlink.R.drawable.ic_qs_unlock, "Unlock", unlockPending)
+        builder.addAction(com.commvault.commlink.R.drawable.ic_qs_lock, "Lock", lockPending)
         builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Exit", stopPending)
             
         val notification = builder.build()
@@ -152,8 +180,11 @@ class HidService : Service() {
     }
 
     private fun updateNotification(title: String, text: String) {
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(1, buildNotification(title, text))
+        val showNotification = getSharedPreferences("commlink_settings", Context.MODE_PRIVATE).getBoolean("persistent_notification", true)
+        if (showNotification) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.notify(1, buildNotification(title, text))
+        }
     }
 
     val connectionState: StateFlow<HidDeviceManager.ConnectionState> get() = hidDeviceManager.connectionState

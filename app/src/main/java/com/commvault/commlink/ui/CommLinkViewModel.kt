@@ -42,7 +42,6 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     private val networkManager = CommLinkNetworkManager.getInstance(application)
 
     // Connection Flow
-    val connectionMode: StateFlow<HidDeviceManager.ConnectionMode> = hidDeviceManager.connectionMode
     val connectionState: StateFlow<HidDeviceManager.ConnectionState> = hidDeviceManager.connectionState
     val activeModifiers: StateFlow<Byte> = hidDeviceManager.activeModifiers
     val isTextPushing: StateFlow<Boolean> = hidDeviceManager.isTextPushing
@@ -212,9 +211,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         hidDeviceManager.typingDelay = speedMs
     }
 
-    fun setConnectionMode(mode: HidDeviceManager.ConnectionMode) {
-        hidDeviceManager.setConnectionMode(mode)
-    }
+
 
     // Keep Alive Status
     private val _isKeepAliveActive = MutableStateFlow(false)
@@ -313,7 +310,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
             delay(2000)
             
             while (isActive) {
-                if (_isAutoConnectEnabled.value && connectionState.value is HidDeviceManager.ConnectionState.Disconnected && hidDeviceManager.connectionMode.value == HidDeviceManager.ConnectionMode.BLUETOOTH) {
+                if (_isAutoConnectEnabled.value && connectionState.value is HidDeviceManager.ConnectionState.Disconnected) {
                     val devices = savedDevices.value
                     if (devices.isNotEmpty()) {
                         val lastDevice = devices.first() // List is sorted by lastConnected descending
@@ -593,6 +590,7 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
         stopKeepAlive()
         restoreOriginalMac()
         stopAutoLockMonitor()
+        unregisterScreenOffReceiver(getApplication())
         super.onCleared()
     }
 
@@ -1537,6 +1535,72 @@ class CommLinkViewModel(application: Application) : AndroidViewModel(application
     init {
         if (_isShakeToLaunchEnabled.value) {
             com.commvault.commlink.service.ShakeDetectorService.start(getApplication())
+        }
+    }
+    // Voice Assistant (Long Press Power / Default Assistant)
+    private val _isVoiceAssistantEnabled = MutableStateFlow(prefs.getBoolean("voice_assistant_enabled", false))
+    val isVoiceAssistantEnabled: StateFlow<Boolean> = _isVoiceAssistantEnabled.asStateFlow()
+
+    fun setVoiceAssistantEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("voice_assistant_enabled", enabled).apply()
+        _isVoiceAssistantEnabled.value = enabled
+    }
+
+    // Persistent Notification Toggle
+    private val _isPersistentNotificationEnabled = MutableStateFlow(prefs.getBoolean("persistent_notification", true))
+    val isPersistentNotificationEnabled: StateFlow<Boolean> = _isPersistentNotificationEnabled.asStateFlow()
+
+    fun setPersistentNotificationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("persistent_notification", enabled).apply()
+        _isPersistentNotificationEnabled.value = enabled
+        val intent = android.content.Intent(getApplication(), com.commvault.commlink.data.bluetooth.HidService::class.java).apply {
+            action = "UPDATE_FOREGROUND"
+        }
+        getApplication<Application>().startService(intent)
+    }
+
+    // Power Button → Lock PC
+    private val _isPowerButtonLockEnabled = MutableStateFlow(prefs.getBoolean("power_button_lock", false))
+    val isPowerButtonLockEnabled: StateFlow<Boolean> = _isPowerButtonLockEnabled.asStateFlow()
+
+    private var screenOffReceiver: com.commvault.commlink.receiver.ScreenOffReceiver? = null
+
+    fun setPowerButtonLockEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("power_button_lock", enabled).apply()
+        _isPowerButtonLockEnabled.value = enabled
+        val context = getApplication<Application>()
+        if (enabled) {
+            registerScreenOffReceiver(context)
+        } else {
+            unregisterScreenOffReceiver(context)
+        }
+    }
+
+    private fun registerScreenOffReceiver(context: Context) {
+        if (screenOffReceiver != null) return // Already registered
+        val receiver = com.commvault.commlink.receiver.ScreenOffReceiver(hidDeviceManager)
+        val filter = android.content.IntentFilter(android.content.Intent.ACTION_SCREEN_OFF)
+        context.registerReceiver(receiver, filter)
+        screenOffReceiver = receiver
+        Log.d("PowerButtonLock", "ScreenOffReceiver registered")
+    }
+
+    private fun unregisterScreenOffReceiver(context: Context) {
+        screenOffReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (e: Exception) {
+                Log.w("PowerButtonLock", "Failed to unregister receiver", e)
+            }
+            screenOffReceiver = null
+            Log.d("PowerButtonLock", "ScreenOffReceiver unregistered")
+        }
+    }
+
+    // Restore power button lock receiver on app start if enabled
+    init {
+        if (_isPowerButtonLockEnabled.value) {
+            registerScreenOffReceiver(getApplication())
         }
     }
 

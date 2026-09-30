@@ -75,13 +75,13 @@ fun DashboardScreen(
     onNavigateToChat: () -> Unit,
     onNavigateToTodo: () -> Unit,
     onNavigateToFileshare: () -> Unit,
-    onNavigateToAudioBridge: () -> Unit,
     onNavigateToShortcuts: () -> Unit,
+    onNavigateToAiAssistant: () -> Unit = {},
     onCheckUpdates: () -> Unit
 ) {
     val context = LocalContext.current
     val connectionState by viewModel.connectionState.collectAsState()
-    val connectionMode by viewModel.connectionMode.collectAsState()
+
     
     val isConnected = connectionState is HidDeviceManager.ConnectionState.Connected
     val isConnecting = connectionState is HidDeviceManager.ConnectionState.Connecting
@@ -93,7 +93,7 @@ fun DashboardScreen(
     val primary = LocalPrimaryColor.current
 
     Scaffold(
-        containerColor = PageBg,
+        containerColor = Color.Transparent,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToSnippets,
@@ -103,7 +103,14 @@ fun DashboardScreen(
             }
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFFF8FAFC), Color(0xFFE2E8F0))
+                )
+            )
+            .padding(paddingValues)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 90.dp, bottom = 100.dp, start = 20.dp, end = 20.dp)
@@ -187,10 +194,10 @@ fun DashboardScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.premium_device),
-                                    contentDescription = "Laptop",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
+                                    painter = painterResource(id = R.drawable.laptop_device),
+                                    contentDescription = "Laptop Image",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
                         }
@@ -313,7 +320,8 @@ fun DashboardScreen(
                         .background(SurfaceCard)
                 ) {
                     val tools = listOf(
-                        Triple("Shortcuts", Icons.Default.AutoAwesome, onNavigateToShortcuts),
+                        Triple("AI Assistant (GPT4All)", Icons.Default.AutoAwesome, onNavigateToAiAssistant),
+                        Triple("Shortcuts", Icons.Default.Bolt, onNavigateToShortcuts),
                         Triple("Snippets", Icons.Default.Description, onNavigateToSnippets),
                         Triple("Automation", Icons.Default.SettingsSuggest, onNavigateToAutomation),
                         Triple("Tasks", Icons.Default.Checklist, onNavigateToTodo),
@@ -613,34 +621,6 @@ fun ModernTopBar(onOpenDrawer: () -> Unit, isConnected: Boolean, primaryColor: C
     }
 }
 
-@Composable
-fun ModernSegmentedToggle(isUsb: Boolean, primaryColor: Color, onToggle: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .width(190.dp)
-            .height(40.dp)
-            .background(SurfaceCard, RoundedCornerShape(20.dp))
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = ShadowColor)
-            .padding(4.dp)
-    ) {
-        Box(
-            modifier = Modifier.weight(1f).fillMaxHeight()
-                .background(if (!isUsb) PageBg else Color.Transparent, RoundedCornerShape(16.dp))
-                .clickable { onToggle(false) },
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Bluetooth", color = if (!isUsb) TextTitle else TextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-        Box(
-            modifier = Modifier.weight(1f).fillMaxHeight()
-                .background(if (isUsb) PageBg else Color.Transparent, RoundedCornerShape(16.dp))
-                .clickable { onToggle(true) },
-            contentAlignment = Alignment.Center
-        ) {
-            Text("USB", color = if (isUsb) TextTitle else TextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
 
 @Composable
 fun BentoCard(

@@ -73,13 +73,10 @@ import com.commvault.commlink.ui.assigned.AssignedWorksScreen
 import com.commvault.commlink.ui.chat.ChatScreen
 import com.commvault.commlink.ui.chat.ChatRoomScreen
 import com.commvault.commlink.ui.fileshare.FileShareScreen
-import com.commvault.commlink.ui.audiobridge.AudioBridgeScreen
 import com.commvault.commlink.ui.todo.TodoScreen
 import com.commvault.commlink.ui.shortcuts.ShortcutsScreen
 import com.commvault.commlink.ui.shortcuts.ShortcutBuilderScreen
-
-
-import com.commvault.commlink.ui.todo.TodoScreen
+import com.commvault.commlink.ui.assistant.Gpt4AllAssistantScreen
 import com.commvault.commlink.ui.help.HelpScreen
 import com.commvault.commlink.ui.components.BiometricLockOverlay
 import com.commvault.commlink.ui.theme.CommLinkTheme
@@ -463,6 +460,17 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
                         )
                         NavigationDrawerItem(
                             icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                            label = { Text("AI Assistant (GPT4All)", fontWeight = FontWeight.SemiBold) },
+                            selected = currentRoute == "gpt4all_assistant",
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate("gpt4all_assistant") { popUpTo("dashboard") }
+                            },
+                            colors = drawerItemColors,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Bolt, contentDescription = null) },
                             label = { Text("Shortcuts", fontWeight = FontWeight.SemiBold) },
                             selected = currentRoute == "shortcuts",
                             onClick = {
@@ -591,11 +599,12 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
                 onNavigateToFileshare = {
                     navController.navigate("fileshare") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
                 },
-                onNavigateToAudioBridge = {
-                    navController.navigate("audio_bridge") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
-                },
+
                 onNavigateToShortcuts = {
                     navController.navigate("shortcuts") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
+                },
+                onNavigateToAiAssistant = {
+                    navController.navigate("gpt4all_assistant") { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true }
                 },
                 onCheckUpdates = {
                     autoUpdater.checkForUpdatesAndDownload()
@@ -706,15 +715,7 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
             )
         }
 
-        composable("audio_bridge") {
-            AudioBridgeScreen(
-                onBack = {
-                    if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack()
-                    }
-                }
-            )
-        }
+
 
         composable("assigned_works") {
             AssignedWorksScreen(
@@ -802,6 +803,19 @@ fun AppNavigation(viewModel: CommLinkViewModel, shortcutsViewModel: com.commvaul
                 shortcutsViewModel = shortcutsViewModel,
                 editId = editId,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("gpt4all_assistant") {
+            Gpt4AllAssistantScreen(
+                onBack = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                },
+                onOpenDrawer = {
+                    scope.launch { drawerState.open() }
+                }
             )
         }
     }

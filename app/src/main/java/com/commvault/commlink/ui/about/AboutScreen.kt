@@ -63,7 +63,7 @@ fun AboutScreen(
                 // Profile Image Header
                 Box(
                     modifier = Modifier
-                        .size(160.dp)
+                        .size(200.dp)
                         .clip(CircleShape)
                         .border(4.dp, Brush.linearGradient(listOf(CommvaultNavy, LocalPrimaryColor.current)), CircleShape)
                 ) {
@@ -79,9 +79,9 @@ fun AboutScreen(
 
                 // Name and Title
                 Text(
-                    text = "Sagar M.",
+                    text = "Sagar M",
                     color = CommvaultNavy,
-                    fontSize = 28.sp,
+                    fontSize = 48.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
                 

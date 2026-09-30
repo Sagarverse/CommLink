@@ -24,6 +24,11 @@ import androidx.compose.ui.unit.sp
 import com.commvault.commlink.ui.CommLinkViewModel
 import com.commvault.commlink.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.compose.material.icons.filled.Mouse
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +64,49 @@ fun PresentationRemoteScreen(
         }
     }
 
+    var isAirMouseActive by remember { mutableStateOf(false) }
+
+    DisposableEffect(isAirMouseActive) {
+        if (isAirMouseActive) {
+            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+            
+            var lastUpdate = 0L
+            
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent?) {
+                    if (event == null) return
+                    val now = System.currentTimeMillis()
+                    // Throttle to ~40ms (25fps) to prevent HID buffer overflow
+                    if (now - lastUpdate > 40) {
+                        lastUpdate = now
+                        // Gyroscope values are rad/s.
+                        // For landscape/portrait holding, map Z to X and X to Y, or just simple mapping.
+                        // Assuming phone held upright: rotation around Y axis (event.values[1]) -> X movement
+                        // rotation around X axis (event.values[0]) -> Y movement
+                        val dx = -(event.values[1] * 40f) // Sensitivity multiplier
+                        val dy = -(event.values[0] * 40f)
+                        viewModel.sendMouseMove(dx, dy)
+                    }
+                }
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            }
+            
+            if (gyroSensor != null) {
+                sensorManager.registerListener(listener, gyroSensor, SensorManager.SENSOR_DELAY_GAME)
+            } else {
+                showActionToast = "No Gyroscope Found"
+                isAirMouseActive = false
+            }
+            
+            onDispose {
+                sensorManager.unregisterListener(listener)
+            }
+        } else {
+            onDispose {}
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -69,6 +117,13 @@ fun PresentationRemoteScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { 
+                        isAirMouseActive = !isAirMouseActive
+                        vibrate(40)
+                        showActionToast = if (isAirMouseActive) "Air Mouse ON" else "Air Mouse OFF"
+                    }) {
+                        Icon(Icons.Default.Mouse, contentDescription = "Air Mouse", tint = if (isAirMouseActive) Color.Green else Color.White)
+                    }
                     IconButton(onClick = { 
                         viewModel.sendPresentationBlack()
                         vibrate(50)
