@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -67,6 +68,7 @@ fun Gpt4AllAssistantScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -94,14 +96,16 @@ fun Gpt4AllAssistantScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            val fileName = DocumentReader.getFileName(context, uri)
-            val fileContent = DocumentReader.readTextFromUri(context, uri)
-            if (fileContent.isNotEmpty()) {
-                val prompt = "Here is the content of the document '$fileName':\n\n$fileContent\n\nPlease analyze this document."
-                inputText = prompt
-                Toast.makeText(context, "Document attached", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Could not read document", Toast.LENGTH_SHORT).show()
+            coroutineScope.launch {
+                val fileName = DocumentReader.getFileName(context, uri)
+                val fileContent = DocumentReader.readTextFromUri(context, uri)
+                if (fileContent.isNotEmpty()) {
+                    val prompt = "Here is the content of the document '$fileName':\n\n$fileContent\n\nPlease analyze this document."
+                    inputText = prompt
+                    Toast.makeText(context, "Document attached", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Could not read document", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -178,18 +182,20 @@ fun Gpt4AllAssistantScreen(
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
                 items(messages, key = { it.id }) { msg ->
-                    ChatBubble(
-                        message = msg,
-                        primaryColor = primary,
-                        onCopy = {
-                            clipboardManager.setText(AnnotatedString(msg.content))
-                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                        },
-                        onTypeToPc = {
-                            viewModel.typeToPc(msg.content)
-                            Toast.makeText(context, "Typing response to PC...", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                    if (msg.content.isNotEmpty() || msg.role == "user") {
+                        ChatBubble(
+                            message = msg,
+                            primaryColor = primary,
+                            onCopy = {
+                                clipboardManager.setText(AnnotatedString(msg.content))
+                                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                            },
+                            onTypeToPc = {
+                                viewModel.typeToPc(msg.content)
+                                Toast.makeText(context, "Typing response to PC...", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
                 }
 
                 if (isLoading) {
@@ -392,12 +398,6 @@ fun ChatBubble(
                         colors = AssistChipDefaults.assistChipColors(containerColor = CardSurface)
                     )
                     AssistChip(
-                        onClick = { DocumentExporter.exportToPresentation(context, "CommLink Presentation", message.content) },
-                        label = { Text("Presentation", fontSize = 11.sp) },
-                        leadingIcon = { Icon(Icons.Default.Slideshow, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp)) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = CardSurface)
-                    )
-                    AssistChip(
                         onClick = onTypeToPc,
                         label = { Text("Type to PC", fontSize = 11.sp, color = primaryColor) },
                         leadingIcon = { Icon(Icons.Default.Keyboard, contentDescription = null, tint = primaryColor, modifier = Modifier.size(14.dp)) },
@@ -427,15 +427,6 @@ fun ThinkingBubble(primaryColor: Color) {
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(primaryColor.copy(alpha = 0.15f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = "AI", tint = primaryColor, modifier = Modifier.size(18.dp))
-        }
-        Spacer(modifier = Modifier.width(8.dp))
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = CardSurface,

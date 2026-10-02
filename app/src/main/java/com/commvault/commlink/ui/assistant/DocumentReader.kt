@@ -3,19 +3,23 @@ package com.commvault.commlink.ui.assistant
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 object DocumentReader {
-    fun readTextFromUri(context: Context, uri: Uri): String {
-        return try {
+    suspend fun readTextFromUri(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+        try {
             val contentResolver = context.contentResolver
             val stringBuilder = java.lang.StringBuilder()
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { reader ->
                     var line: String? = reader.readLine()
-                    while (line != null) {
+                    var charsRead = 0
+                    while (line != null && charsRead < 50000) { // Limit to ~50k chars to avoid OOM
                         stringBuilder.append(line).append("\n")
+                        charsRead += line.length
                         line = reader.readLine()
                     }
                 }
