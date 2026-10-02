@@ -56,11 +56,12 @@ fun FileShareScreen(viewModel: CommLinkViewModel, onBack: () -> Unit) {
     
     // Server instance
     val server = remember { CommLinkFileServer(context) }
-    val baseDir = remember { context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir }
+    val baseDir = remember { java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "CommLink") }
     
     var filesList by remember { mutableStateOf(emptyList<File>()) }
     
     fun refreshFiles() {
+        if (!baseDir.exists()) baseDir.mkdirs()
         if (baseDir.exists()) {
             filesList = baseDir.listFiles()?.toList()?.sortedByDescending { it.lastModified() } ?: emptyList()
         }
@@ -165,6 +166,23 @@ fun FileShareScreen(viewModel: CommLinkViewModel, onBack: () -> Unit) {
                     }
                     IconButton(onClick = { filePickerLauncher.launch("*/*") }) {
                         Icon(Icons.Default.Add, contentDescription = "Share File", tint = primaryColor)
+                    }
+                    IconButton(onClick = { 
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", baseDir)
+                            intent.setDataAndType(uri, "resource/folder")
+                            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            if (intent.resolveActivity(context.packageManager) != null) {
+                                context.startActivity(intent)
+                            } else {
+                                android.widget.Toast.makeText(context, "No file manager found. Files saved in Downloads/CommLink", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        } catch(e: Exception) {
+                            android.widget.Toast.makeText(context, "Files saved in Downloads/CommLink", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }) {
+                        Icon(Icons.Default.Folder, contentDescription = "Open Folder", tint = primaryColor)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PageBackground)
@@ -314,11 +332,10 @@ fun FileItemCard(file: File, primaryColor: Color, onClick: () -> Unit, onDelete:
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF334155).copy(alpha = 0.08f))
             .clip(RoundedCornerShape(16.dp))
             .background(CardSurface)
             .clickable { onClick() }
-            .padding(16.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Icon
@@ -354,6 +371,24 @@ fun FileItemCard(file: File, primaryColor: Color, onClick: () -> Unit, onDelete:
                 color = TextTertiary,
                 fontSize = 12.sp
             )
+        }
+        
+        // Share button
+        val context = LocalContext.current
+        IconButton(onClick = {
+            try {
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "*/*"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share File"))
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Could not share file", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }) {
+            Icon(Icons.Default.Share, contentDescription = "Share", tint = primaryColor)
         }
         
         // Delete button

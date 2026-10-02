@@ -17,7 +17,7 @@ import java.util.Properties
 
 class CommLinkFileServer(private val context: Context, port: Int = 8080) : NanoHTTPD("0.0.0.0", port) {
 
-    private val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+    private val baseDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "CommLink")
     
     init {
         if (!baseDir.exists()) {
