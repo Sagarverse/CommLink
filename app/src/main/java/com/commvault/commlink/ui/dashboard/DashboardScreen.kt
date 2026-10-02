@@ -187,19 +187,63 @@ fun DashboardScreen(
                             
                             Spacer(modifier = Modifier.width(16.dp))
 
-                            // Right side: Laptop Image
+                            // Right side: Laptop Device Mockup
                             Box(
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .clip(RoundedCornerShape(10.dp)),
+                                modifier = Modifier.width(140.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.laptop_device),
-                                    contentDescription = "Laptop Image",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    // Laptop Screen (Lid + Bezel)
+                                    Box(
+                                        modifier = Modifier
+                                            .width(120.dp)
+                                            .aspectRatio(16f / 10f)
+                                            .background(Color(0xFF1E1E1E), RoundedCornerShape(6.dp))
+                                            .border(1.5.dp, Color(0xFF475569), RoundedCornerShape(6.dp))
+                                            .padding(4.dp) // Bezel thickness
+                                    ) {
+                                        // The Screen Content (Wallpaper)
+                                        Image(
+                                            painter = painterResource(id = R.drawable.laptop_device),
+                                            contentDescription = "Laptop Screen",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(2.dp))
+                                        )
+                                        
+                                        // Webcam dot
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopCenter)
+                                                .offset(y = (-2).dp)
+                                                .size(2.dp)
+                                                .background(Color(0xFF0F172A), CircleShape)
+                                        )
+                                    }
+                                    
+                                    // Laptop Base (Deck)
+                                    Box(
+                                        modifier = Modifier
+                                            .width(136.dp)
+                                            .height(8.dp)
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    colors = listOf(Color(0xFFCBD5E1), Color(0xFF94A3B8))
+                                                ), 
+                                                RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
+                                            )
+                                    ) {
+                                        // Trackpad/Notch indentation
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopCenter)
+                                                .width(24.dp)
+                                                .height(3.dp)
+                                                .background(Color(0xFF94A3B8), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
