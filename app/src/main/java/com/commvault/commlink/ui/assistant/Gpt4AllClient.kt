@@ -84,6 +84,7 @@ class Gpt4AllClient {
         isLocalPcMode: Boolean = false,
         pcHost: String = "192.168.1.100",
         pcPort: Int = 4891,
+        systemPrompt: String = "You are CommLink AI Assistant. Provide helpful, direct, beautifully structured responses with bold headings, markdown tables, and code snippets where relevant.",
         onChunk: suspend (accumulatedText: String) -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         // Handle Image generation
@@ -94,11 +95,11 @@ class Gpt4AllClient {
         }
 
         if (isLocalPcMode) {
-            return@withContext streamFromLocalPc(history, pcHost, pcPort, onChunk)
+            return@withContext streamFromLocalPc(history, pcHost, pcPort, systemPrompt, onChunk)
         }
 
         // 1. Try real-time streaming from free endpoint
-        val streamResult = streamFromFreeCloud(history, onChunk)
+        val streamResult = streamFromFreeCloud(history, systemPrompt, onChunk)
         if (streamResult.isSuccess && streamResult.getOrNull()?.isNotBlank() == true) {
             return@withContext streamResult
         }
@@ -116,6 +117,7 @@ class Gpt4AllClient {
 
     private suspend fun streamFromFreeCloud(
         history: List<ChatMessage>,
+        systemPrompt: String,
         onChunk: suspend (String) -> Unit
     ): Result<String> {
         return try {
@@ -134,7 +136,7 @@ class Gpt4AllClient {
             messagesList.add(
                 mapOf(
                     "role" to "system",
-                    "content" to "You are CommLink AI Assistant. Provide helpful, direct, beautifully structured responses with bold headings, markdown tables, and code snippets where relevant."
+                    "content" to systemPrompt
                 )
             )
 
@@ -178,7 +180,11 @@ class Gpt4AllClient {
                                     val token = delta.get("content").asString
                                     if (!token.isNullOrEmpty()) {
                                         accumulated.append(token)
-                                        onChunk(accumulated.toString())
+                                        var cleanText = accumulated.toString()
+                                        if (cleanText.startsWith("Assistant:", ignoreCase = true)) cleanText = cleanText.substring(10).trimStart()
+                                        if (cleanText.startsWith("AI:", ignoreCase = true)) cleanText = cleanText.substring(3).trimStart()
+                                        
+                                        onChunk(cleanText)
                                     }
                                 }
                             }
@@ -234,6 +240,7 @@ class Gpt4AllClient {
         history: List<ChatMessage>,
         host: String,
         port: Int,
+        systemPrompt: String,
         onChunk: suspend (String) -> Unit
     ): Result<String> {
         return try {
@@ -250,6 +257,12 @@ class Gpt4AllClient {
             }
 
             val messagesList = mutableListOf<Map<String, String>>()
+            messagesList.add(
+                mapOf(
+                    "role" to "system",
+                    "content" to systemPrompt
+                )
+            )
             val recent = history.takeLast(10)
             for (msg in recent) {
                 if (!msg.isError) {

@@ -61,6 +61,7 @@ fun Gpt4AllAssistantScreen(
     val isLocalPcMode by viewModel.isLocalPcMode.collectAsState()
     val serverHost by viewModel.serverHost.collectAsState()
     val serverPort by viewModel.serverPort.collectAsState()
+    val systemPrompt by viewModel.systemPrompt.collectAsState()
 
     var inputText by remember { mutableStateOf("") }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -88,52 +89,48 @@ fun Gpt4AllAssistantScreen(
         }
     }
 
+    // Document picker launcher
+    val documentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val fileName = DocumentReader.getFileName(context, uri)
+            val fileContent = DocumentReader.readTextFromUri(context, uri)
+            if (fileContent.isNotEmpty()) {
+                val prompt = "Here is the content of the document '$fileName':\n\n$fileContent\n\nPlease analyze this document."
+                inputText = prompt
+                Toast.makeText(context, "Document attached", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Could not read document", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(primary.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = primary, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                "AI Assistant",
+                                "Copilot Assistant",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
                                 color = CommvaultNavy
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = primary.copy(alpha = 0.12f),
-                                modifier = Modifier.padding(vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if (isLocalPcMode) "PC Server" else "Unlimited Free",
-                                    color = primary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .clickable { showSettingsDialog = true }
-                                .padding(vertical = 2.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .background(Color(0xFF10B981), CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = if (isLocalPcMode) "Local PC: $serverHost:$serverPort" else "Online • Ready to chat",
-                                fontSize = 11.sp,
-                                color = TextSecondary,
-                                fontWeight = FontWeight.Medium
+                                text = if (isLocalPcMode) "Local PC Mode" else "Unlimited Free AI",
+                                fontSize = 12.sp,
+                                color = TextSecondary
                             )
                         }
                     }
@@ -236,15 +233,21 @@ fun Gpt4AllAssistantScreen(
                             } catch (e: Exception) {
                                 Toast.makeText(context, "Speech recognizer unavailable", Toast.LENGTH_SHORT).show()
                             }
-                        },
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(primary.copy(alpha = 0.12f), CircleShape)
+                        }
                     ) {
-                        Icon(Icons.Default.Mic, contentDescription = "Voice Input", tint = primary)
+                        Icon(Icons.Default.Mic, contentDescription = "Voice Input", tint = TextSecondary)
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    // Attach Document
+                    IconButton(
+                        onClick = {
+                            documentLauncher.launch(arrayOf("*/*"))
+                        }
+                    ) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach Document", tint = TextSecondary)
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
 
                     // Text input
                     OutlinedTextField(
@@ -307,11 +310,12 @@ fun Gpt4AllAssistantScreen(
             isLocalPcMode = isLocalPcMode,
             currentHost = serverHost,
             currentPort = serverPort,
+            currentSystemPrompt = systemPrompt,
             primaryColor = primary,
             onDismiss = { showSettingsDialog = false },
-            onSave = { localMode, host, port ->
+            onSave = { localMode, host, port, prompt ->
                 viewModel.toggleLocalPcMode(localMode)
-                viewModel.updatePcSettings(host, port)
+                viewModel.updatePcSettings(host, port, prompt)
                 showSettingsDialog = false
             }
         )
@@ -333,23 +337,6 @@ fun ChatBubble(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        if (!isUser) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(primaryColor.copy(alpha = 0.15f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "AI",
-                    tint = primaryColor,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
         Column(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
             modifier = Modifier.widthIn(max = if (isUser) 290.dp else 340.dp)
@@ -515,13 +502,15 @@ fun AssistantSettingsDialog(
     isLocalPcMode: Boolean,
     currentHost: String,
     currentPort: Int,
+    currentSystemPrompt: String,
     primaryColor: Color,
     onDismiss: () -> Unit,
-    onSave: (localMode: Boolean, host: String, port: Int) -> Unit
+    onSave: (localMode: Boolean, host: String, port: Int, prompt: String) -> Unit
 ) {
     var localMode by remember { mutableStateOf(isLocalPcMode) }
     var host by remember { mutableStateOf(currentHost) }
     var portText by remember { mutableStateOf(currentPort.toString()) }
+    var systemPrompt by remember { mutableStateOf(currentSystemPrompt) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -608,13 +597,23 @@ fun AssistantSettingsDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("System Prompt", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CommvaultNavy)
+                OutlinedTextField(
+                    value = systemPrompt,
+                    onValueChange = { systemPrompt = it },
+                    label = { Text("Instructions for AI") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    maxLines = 5
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     val p = portText.toIntOrNull() ?: 4891
-                    onSave(localMode, host, p)
+                    onSave(localMode, host, p, systemPrompt)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
             ) {

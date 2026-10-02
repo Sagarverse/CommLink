@@ -43,6 +43,11 @@ class Gpt4AllViewModel(application: Application) : AndroidViewModel(application)
     private val _serverPort = MutableStateFlow(prefs.getInt("server_port", 4891))
     val serverPort: StateFlow<Int> = _serverPort.asStateFlow()
 
+    private val _systemPrompt = MutableStateFlow(
+        prefs.getString("system_prompt", "You are CommLink AI Assistant. Provide helpful, direct, beautifully structured responses with bold headings, markdown tables, and code snippets where relevant.") ?: ""
+    )
+    val systemPrompt: StateFlow<String> = _systemPrompt.asStateFlow()
+
     private val _isTtsEnabled = MutableStateFlow(prefs.getBoolean("tts_enabled", false))
     val isTtsEnabled: StateFlow<Boolean> = _isTtsEnabled.asStateFlow()
 
@@ -82,6 +87,7 @@ class Gpt4AllViewModel(application: Application) : AndroidViewModel(application)
                 isLocalPcMode = _isLocalPcMode.value,
                 pcHost = _serverHost.value,
                 pcPort = _serverPort.value,
+                systemPrompt = _systemPrompt.value,
                 onChunk = { streamedContent ->
                     _messages.value = _messages.value.map { msg ->
                         if (msg.id == assistantPlaceholderId) {
@@ -170,12 +176,14 @@ class Gpt4AllViewModel(application: Application) : AndroidViewModel(application)
         prefs.edit().putBoolean("is_local_pc_mode", enabled).apply()
     }
 
-    fun updatePcSettings(host: String, port: Int) {
+    fun updatePcSettings(host: String, port: Int, prompt: String) {
         _serverHost.value = host.trim()
         _serverPort.value = port
+        _systemPrompt.value = prompt.trim()
         prefs.edit()
             .putString("server_host", _serverHost.value)
             .putInt("server_port", _serverPort.value)
+            .putString("system_prompt", _systemPrompt.value)
             .apply()
     }
 
