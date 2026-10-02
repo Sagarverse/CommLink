@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,16 +50,52 @@ import com.commvault.commlink.ui.CommLinkViewModel
 import com.commvault.commlink.ui.theme.*
 import kotlin.math.roundToInt
 
-// ── ULTRA MODERN UI CONSTANTS ──
-val PageBg = Color(0xFFF4F7FB) // Soft cool gray background
-val SurfaceCard = Color(0xFFFFFFFF)
-val SurfaceCardLight = Color(0xFFF8FAFC)
-val TextTitle = Color(0xFF0F172A)
-val TextSub = Color(0xFF64748B)
-val BentoRadiusLg = 32.dp
+// ── BEAST LEVEL UI: PREMIUM DARK GLASS THEME ──
+val DarkBg = Color(0xFF09090B)
+val GlassSurface = Color(0xFF18181B).copy(alpha = 0.65f)
+val GlassBorder = Color(0xFF27272A).copy(alpha = 0.8f)
+val AccentCyan = Color(0xFF06B6D4)
+val AccentPurple = Color(0xFF8B5CF6)
+val TextTitleDark = Color(0xFFF8FAFC)
+val TextSubDark = Color(0xFF94A3B8)
+val BentoRadiusLg = 36.dp
 val BentoRadiusMd = 24.dp
 val BentoRadiusSm = 16.dp
-val ShadowColor = Color(0xFF334155).copy(alpha = 0.08f)
+
+@Composable
+fun AnimatedMeshBackground() {
+    val infiniteTransition = rememberInfiniteTransition(label = "mesh")
+    val rotation1 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(25000, easing = LinearEasing)), label = "rot1"
+    )
+    val rotation2 by infiniteTransition.animateFloat(
+        initialValue = 360f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(30000, easing = LinearEasing)), label = "rot2"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Reverse), label = "pulse"
+    )
+
+    Box(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+        Box(
+            modifier = Modifier
+                .offset(x = (-150).dp, y = (-100).dp)
+                .size(500.dp)
+                .graphicsLayer(rotationZ = rotation1, alpha = pulseAlpha)
+                .background(Brush.radialGradient(listOf(AccentPurple.copy(alpha = 0.3f), Color.Transparent)), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = 100.dp, y = 200.dp)
+                .size(600.dp)
+                .graphicsLayer(rotationZ = rotation2, alpha = pulseAlpha)
+                .background(Brush.radialGradient(listOf(AccentCyan.copy(alpha = 0.25f), Color.Transparent)), CircleShape)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,103 +119,92 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val connectionState by viewModel.connectionState.collectAsState()
-
     
     val isConnected = connectionState is HidDeviceManager.ConnectionState.Connected
-    val isConnecting = connectionState is HidDeviceManager.ConnectionState.Connecting
     val deviceName = (connectionState as? HidDeviceManager.ConnectionState.Connected)?.deviceName ?: ""
     val savedDevices by viewModel.savedDevices.collectAsState()
     
-    val trackpadSensitivity by viewModel.trackpadSensitivity.collectAsState()
-    
-    val primary = LocalPrimaryColor.current
+    val primary = AccentCyan // Switch to Cyan for dark theme accent
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToSnippets,
-                containerColor = primary
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Take Notes", tint = Color.White)
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedMeshBackground()
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = onNavigateToAiAssistant,
+                    containerColor = AccentPurple,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.shadow(16.dp, RoundedCornerShape(20.dp), spotColor = AccentPurple)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = "AI Assistant")
+                }
             }
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFFF8FAFC), Color(0xFFE2E8F0))
-                )
-            )
-            .padding(paddingValues)) {
+        ) { paddingValues ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 90.dp, bottom = 100.dp, start = 20.dp, end = 20.dp)
+                contentPadding = PaddingValues(top = 100.dp, bottom = 120.dp, start = 24.dp, end = 24.dp)
             ) {
-            
-            // --- HERO SECTION: MODERN DEVICE CARD ---
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                
+                // --- HERO: 3D GLASS DEVICE CARD ---
+                item {
                     val haptic = LocalHapticFeedback.current
-
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.95f)
-                            .shadow(32.dp, RoundedCornerShape(32.dp), spotColor = if (isConnected) primary.copy(alpha = 0.4f) else ShadowColor)
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFFFFFFFF), Color(0xFFF8FAFC))
-                                )
-                            )
-                            .border(1.dp, Color.White, RoundedCornerShape(32.dp))
+                            .fillMaxWidth()
+                            .shadow(32.dp, RoundedCornerShape(BentoRadiusLg), spotColor = if (isConnected) AccentCyan.copy(alpha = 0.5f) else Color.Black)
+                            .clip(RoundedCornerShape(BentoRadiusLg))
+                            .background(Brush.linearGradient(listOf(GlassSurface, Color(0xFF0F0F13).copy(alpha=0.8f))))
+                            .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha=0.3f), Color.Transparent)), RoundedCornerShape(BentoRadiusLg))
                             .pointerInput(isConnected) {
-                                detectTapGestures(
-                                    onTap = { if (!isConnected) onNavigateToPairing() }
-                                )
+                                detectTapGestures(onTap = { if (!isConnected) onNavigateToPairing() })
                             }
-                            .padding(24.dp)
+                            .padding(28.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Left side: Device Name & Status
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.Start
-                            ) {
+                            // Info Column
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isConnected) "SYSTEM\nONLINE" else "SYSTEM\nOFFLINE",
+                                    color = if (isConnected) AccentCyan else TextSubDark,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 4.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = if (isConnected) deviceName.ifEmpty { "Workstation" } else "No Device",
-                                    color = TextTitle,
-                                    fontSize = 28.sp,
+                                    color = TextTitleDark,
+                                    fontSize = 32.sp,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = (-1).sp,
-                                    lineHeight = 32.sp
+                                    lineHeight = 34.sp
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .background(if (isConnected) primary.copy(alpha = 0.15f) else Color(0xFFF1F5F9), CircleShape)
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        .background(if (isConnected) AccentCyan.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f), CircleShape)
+                                        .border(1.dp, if (isConnected) AccentCyan.copy(alpha = 0.3f) else Color.Transparent, CircleShape)
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
-                                            .shadow(4.dp, CircleShape, spotColor = primary)
-                                            .background(if (isConnected) primary else Color.Gray, CircleShape)
+                                            .shadow(8.dp, CircleShape, spotColor = if (isConnected) AccentCyan else Color.Transparent)
+                                            .background(if (isConnected) AccentCyan else Color.Gray, CircleShape)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = if (isConnected) "CONNECTED" else "OFFLINE",
-                                        color = if (isConnected) primary else TextSub,
-                                        fontSize = 11.sp,
+                                        text = if (isConnected) "CONNECTED" else "TAP TO PAIR",
+                                        color = if (isConnected) AccentCyan else TextSubDark,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         letterSpacing = 1.sp
                                     )
@@ -187,304 +213,278 @@ fun DashboardScreen(
                             
                             Spacer(modifier = Modifier.width(16.dp))
 
-                            // Right side: Laptop Device Mockup
+                            // Laptop Mockup
                             Box(
                                 modifier = Modifier.width(140.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    // Laptop Screen (Lid + Bezel)
+                                    // Screen
                                     Box(
                                         modifier = Modifier
-                                            .width(120.dp)
+                                            .width(130.dp)
                                             .aspectRatio(16f / 10f)
-                                            .background(Color(0xFF1E1E1E), RoundedCornerShape(6.dp))
-                                            .border(1.5.dp, Color(0xFF475569), RoundedCornerShape(6.dp))
-                                            .padding(4.dp) // Bezel thickness
+                                            .background(Color(0xFF000000), RoundedCornerShape(8.dp))
+                                            .border(2.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
+                                            .padding(4.dp)
                                     ) {
-                                        // The Screen Content (Wallpaper)
                                         Image(
                                             painter = painterResource(id = R.drawable.laptop_device),
-                                            contentDescription = "Laptop Screen",
+                                            contentDescription = "Screen",
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(2.dp))
+                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(3.dp))
                                         )
-                                        
-                                        // Webcam dot
                                         Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopCenter)
-                                                .offset(y = (-2).dp)
-                                                .size(2.dp)
-                                                .background(Color(0xFF0F172A), CircleShape)
+                                            modifier = Modifier.align(Alignment.TopCenter).offset(y = (-2).dp).size(2.dp).background(Color(0xFF111111), CircleShape)
                                         )
+                                        if (!isConnected) {
+                                            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)))
+                                        }
                                     }
-                                    
-                                    // Laptop Base (Deck)
+                                    // Deck
                                     Box(
                                         modifier = Modifier
-                                            .width(136.dp)
+                                            .width(145.dp)
                                             .height(8.dp)
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    colors = listOf(Color(0xFFCBD5E1), Color(0xFF94A3B8))
-                                                ), 
-                                                RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
-                                            )
+                                            .background(Brush.verticalGradient(listOf(Color(0xFF71717A), Color(0xFF3F3F46))), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                                     ) {
-                                        // Trackpad/Notch indentation
                                         Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopCenter)
-                                                .width(24.dp)
-                                                .height(3.dp)
-                                                .background(Color(0xFF94A3B8), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
+                                            modifier = Modifier.align(Alignment.TopCenter).width(24.dp).height(2.dp).background(Color(0xFF27272A), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
                                         )
                                     }
                                 }
                             }
                         }
                     }
-                    
-
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-            }
 
-            // --- DIRECT UNLOCK SLIDER (WHITE BACKGROUND TILE) ---
-            item {
-                BiDirectionalSwipeUnlock(
-                    isConnected = isConnected,
-                    primaryColor = primary,
-                    onSwipeRight = {
-                        if (viewModel.getSavedPassword().isEmpty()) {
-                            android.widget.Toast.makeText(context, "Set password in Shield first", android.widget.Toast.LENGTH_SHORT).show()
-                            onNavigateToPasswordManager()
-                        } else {
-                            viewModel.unlockWindows(wakeScreenFirst = false)
-                            android.widget.Toast.makeText(context, "Direct Unlock triggered", android.widget.Toast.LENGTH_SHORT).show()
+                // --- DIRECT UNLOCK SLIDER (NEON THEME) ---
+                item {
+                    BiDirectionalSwipeUnlock(
+                        isConnected = isConnected,
+                        primaryColor = AccentCyan,
+                        onSwipeRight = {
+                            if (viewModel.getSavedPassword().isEmpty()) {
+                                android.widget.Toast.makeText(context, "Set password in Shield first", android.widget.Toast.LENGTH_SHORT).show()
+                                onNavigateToPasswordManager()
+                            } else {
+                                viewModel.unlockWindows(wakeScreenFirst = false)
+                            }
+                        },
+                        onSwipeLeft = {
+                            if (viewModel.getSavedPassword().isEmpty()) {
+                                android.widget.Toast.makeText(context, "Set password in Shield first", android.widget.Toast.LENGTH_SHORT).show()
+                                onNavigateToPasswordManager()
+                            } else {
+                                viewModel.unlockWindows(wakeScreenFirst = true)
+                            }
                         }
-                    },
-                    onSwipeLeft = {
-                        if (viewModel.getSavedPassword().isEmpty()) {
-                            android.widget.Toast.makeText(context, "Set password in Shield first", android.widget.Toast.LENGTH_SHORT).show()
-                            onNavigateToPasswordManager()
-                        } else {
-                            viewModel.unlockWindows(wakeScreenFirst = true)
-                            android.widget.Toast.makeText(context, "Wake & Unlock triggered", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-            
-            // --- BENTO GRID: VERTICAL AUDIO LEFT, ESSENTIALS RIGHT ---
-            item {
-                Text("Dashboard", color = TextTitle, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 12.dp))
-                
-                Row(modifier = Modifier.fillMaxWidth().height(220.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    
-                    // VERTICAL AUDIO CONTROLS ON LEFT
-                    VerticalMediaControlBar(
-                        modifier = Modifier.width(64.dp).fillMaxHeight(),
-                        viewModel = viewModel,
-                        primaryColor = primary
                     )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+
+                // --- PREMIUM BENTO GRID ---
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Core Modules", color = TextTitleDark, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Icon(Icons.Default.Dashboard, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     
-                    // ESSENTIALS ON RIGHT
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        BentoCard(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            title = "Keyboard & Trackpad",
-                            icon = Icons.Default.Keyboard,
-                            primaryColor = primary,
-                            accentColor = Color(0xFF3B82F6), // Blue
-                            enabled = isConnected,
-                            onClick = onNavigateToKeyboard
+                    Row(modifier = Modifier.fillMaxWidth().height(230.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        
+                        // MEDIA STRIP
+                        VerticalMediaControlBar(
+                            modifier = Modifier.width(70.dp).fillMaxHeight(),
+                            viewModel = viewModel,
+                            primaryColor = AccentPurple
                         )
-                        Row(modifier = Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        
+                        // BENTO RIGHT
+                        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             BentoCard(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                title = "Presenter",
-                                icon = Icons.Default.Slideshow,
-                                primaryColor = primary,
-                                accentColor = Color(0xFFF59E0B), // Amber
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                title = "Keyboard & Trackpad",
+                                icon = Icons.Default.Keyboard,
+                                primaryColor = AccentCyan,
+                                accentColor = AccentCyan,
                                 enabled = isConnected,
-                                centerContent = true,
-                                onClick = onNavigateToPresenter
+                                large = true,
+                                onClick = onNavigateToKeyboard
                             )
-                            BentoCard(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                title = "Files",
-                                icon = Icons.Default.Folder,
-                                primaryColor = primary,
-                                accentColor = Color(0xFF8B5CF6), // Purple
-                                enabled = true,
-                                centerContent = true,
-                                onClick = onNavigateToFileshare
-                            )
+                            Row(modifier = Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                BentoCard(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    title = "Present",
+                                    icon = Icons.Default.Slideshow,
+                                    primaryColor = AccentCyan,
+                                    accentColor = Color(0xFFF59E0B),
+                                    enabled = isConnected,
+                                    centerContent = true,
+                                    onClick = onNavigateToPresenter
+                                )
+                                BentoCard(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    title = "Files",
+                                    icon = Icons.Default.Folder,
+                                    primaryColor = AccentCyan,
+                                    accentColor = Color(0xFF10B981),
+                                    enabled = true,
+                                    centerContent = true,
+                                    onClick = onNavigateToFileshare
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-            
-            // --- QUICK ACTION PILLS ---
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    ActionPill(title = "Lock PC", icon = Icons.Default.Lock, onClick = { viewModel.lockWindows() })
-                    ActionPill(title = "Sync Text", icon = Icons.Default.Sync, onClick = {
-                        try {
-                            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            val clipData = clipboardManager.primaryClip
-                            if (clipData != null && clipData.itemCount > 0) {
-                                val text = clipData.getItemAt(0).text?.toString() ?: ""
-                                if (text.isNotEmpty()) {
-                                    viewModel.sendText(text)
-                                    android.widget.Toast.makeText(context, "Sent to PC!", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        } catch (e: Exception) { }
-                    })
-                    ActionPill(title = "Shield", icon = Icons.Default.Security, onClick = onNavigateToPasswordManager)
-                    ActionPill(title = "Settings", icon = Icons.Default.Settings, onClick = onNavigateToSettings)
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-            }
 
-            // --- ADVANCED TOOLS (IOS STYLE GROUPED LIST) ---
-            item {
-                Text("Advanced Tools", color = TextTitle, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 12.dp))
-                
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(BentoRadiusMd), spotColor = ShadowColor)
-                        .clip(RoundedCornerShape(BentoRadiusMd))
-                        .background(SurfaceCard)
-                ) {
-                    val tools = listOf(
-                        Triple("AI Assistant", Icons.Default.AutoAwesome, onNavigateToAiAssistant),
-                        Triple("🤖 AI Agent (Autonomous)", Icons.Default.SmartToy, onNavigateToAgent),
-                        Triple("Shortcuts", Icons.Default.Bolt, onNavigateToShortcuts),
-                        Triple("Snippets", Icons.Default.Description, onNavigateToSnippets),
-                        Triple("Automation", Icons.Default.SettingsSuggest, onNavigateToAutomation),
-                        Triple("Tasks", Icons.Default.Checklist, onNavigateToTodo),
-                        Triple("Chat", Icons.AutoMirrored.Filled.Chat, onNavigateToChat)
-                    )
+                // --- NEON ACTION PILLS ---
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        ActionPill(title = "Lock", icon = Icons.Default.Lock, color = Color(0xFFEF4444), onClick = { viewModel.lockWindows() })
+                        ActionPill(title = "Sync", icon = Icons.Default.Sync, color = AccentCyan, onClick = {
+                            try {
+                                val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                val clipData = clipboardManager.primaryClip
+                                if (clipData != null && clipData.itemCount > 0) {
+                                    val text = clipData.getItemAt(0).text?.toString() ?: ""
+                                    if (text.isNotEmpty()) viewModel.sendText(text)
+                                }
+                            } catch (e: Exception) { }
+                        })
+                        ActionPill(title = "Shield", icon = Icons.Default.Security, color = AccentPurple, onClick = onNavigateToPasswordManager)
+                        ActionPill(title = "Settings", icon = Icons.Default.Settings, color = Color(0xFF64748B), onClick = onNavigateToSettings)
+                    }
+                    Spacer(modifier = Modifier.height(40.dp))
+                }
+
+                // --- GLASS LIST: AUTOMATION & AI ---
+                item {
+                    Text("Intelligence & Tools", color = TextTitleDark, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 16.dp))
                     
-                    tools.forEachIndexed { index, (title, icon, onClick) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onClick() }
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier.size(32.dp).background(primary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(icon as ImageVector, contentDescription = null, tint = primary, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(title as String, color = TextTitle, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = TextSub, modifier = Modifier.size(16.dp))
-                        }
-                        if (index < tools.size - 1) {
-                            HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = SurfaceCardLight, thickness = 1.dp)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-
-            // --- SAVED DEVICES (IOS STYLE) ---
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Saved Devices", color = TextTitle, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                    Text("Add New", color = primary, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onNavigateToPairing() })
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                if (savedDevices.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().height(80.dp).background(SurfaceCard, RoundedCornerShape(BentoRadiusMd)), contentAlignment = Alignment.Center) {
-                        Text("No devices saved", color = TextSub, fontSize = 14.sp)
-                    }
-                } else {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(BentoRadiusMd), spotColor = ShadowColor)
+                            .shadow(16.dp, RoundedCornerShape(BentoRadiusMd), spotColor = Color.Black)
                             .clip(RoundedCornerShape(BentoRadiusMd))
-                            .background(SurfaceCard)
+                            .background(GlassSurface)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(BentoRadiusMd))
                     ) {
-                        savedDevices.forEachIndexed { index, device ->
-                            val isConn = (deviceName == device.name || deviceName == device.address)
+                        val tools = listOf(
+                            Triple("Autonomous Agent", Icons.Default.SmartToy, onNavigateToAgent),
+                            Triple("Workflow Automation", Icons.Default.SettingsSuggest, onNavigateToAutomation),
+                            Triple("Snippets & Notes", Icons.Default.Description, onNavigateToSnippets),
+                            Triple("Task Management", Icons.Default.Checklist, onNavigateToTodo),
+                            Triple("System Shortcuts", Icons.Default.Bolt, onNavigateToShortcuts),
+                            Triple("Terminal Chat", Icons.AutoMirrored.Filled.Chat, onNavigateToChat)
+                        )
+                        
+                        tools.forEachIndexed { index, (title, icon, onClick) ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { viewModel.connectDevice(device.address) }
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                                    .clickable { onClick() }
+                                    .padding(horizontal = 24.dp, vertical = 20.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Laptop, contentDescription = null, tint = if(isConn) primary else TextSub, modifier = Modifier.size(28.dp))
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(device.name, color = TextTitle, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(if (isConn) "Connected" else device.address, color = if (isConn) primary else TextSub, fontSize = 12.sp)
+                                    Box(
+                                        modifier = Modifier.size(36.dp).background(AccentPurple.copy(alpha = 0.2f), RoundedCornerShape(10.dp)).border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(10.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(icon as ImageVector, contentDescription = null, tint = AccentPurple, modifier = Modifier.size(18.dp))
                                     }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(title as String, color = TextTitleDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                                 }
-                                if (isConn) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = primary, modifier = Modifier.size(24.dp))
-                                } else {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = TextSub, modifier = Modifier.size(16.dp))
-                                }
+                                Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = TextSubDark, modifier = Modifier.size(16.dp))
                             }
-                            if (index < savedDevices.size - 1) {
-                                HorizontalDivider(modifier = Modifier.padding(start = 64.dp), color = SurfaceCardLight, thickness = 1.dp)
+                            if (index < tools.size - 1) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = GlassBorder, thickness = 1.dp)
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
-                Spacer(modifier = Modifier.height(32.dp))
-            } // end item
-        } // end LazyColumn
-            
-        // Fading App Bar Layer
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            PageBg,
-                            PageBg.copy(alpha = 0.95f),
-                            PageBg.copy(alpha = 0.7f),
-                            PageBg.copy(alpha = 0.0f)
-                        )
-                    )
-                )
-        ) {
-            ModernTopBar(
-                onOpenDrawer = onOpenDrawer,
-                isConnected = isConnected,
-                primaryColor = primary,
-                onConnectClick = { if (isConnected) viewModel.disconnect() else onNavigateToPairing() }
-            )
-        }
-    } // end inner Box
-} // end Scaffold block
-} // end DashboardScreen
 
-// ── CUSTOM MODERN COMPONENTS ──
+                // --- SAVED DEVICES ---
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Saved Hardware", color = TextTitleDark, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Text("+ Add Device", color = AccentCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onNavigateToPairing() }.padding(4.dp))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    if (savedDevices.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp).background(GlassSurface, RoundedCornerShape(BentoRadiusMd)).border(1.dp, GlassBorder, RoundedCornerShape(BentoRadiusMd)), contentAlignment = Alignment.Center) {
+                            Text("No devices paired yet.", color = TextSubDark, fontSize = 14.sp)
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(BentoRadiusMd))
+                                .background(GlassSurface)
+                                .border(1.dp, GlassBorder, RoundedCornerShape(BentoRadiusMd))
+                        ) {
+                            savedDevices.forEachIndexed { index, device ->
+                                val isConn = (deviceName == device.name || deviceName == device.address)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.connectDevice(device.address) }
+                                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier.size(44.dp).background(if (isConn) AccentCyan.copy(alpha=0.2f) else Color.White.copy(alpha=0.05f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Laptop, contentDescription = null, tint = if(isConn) AccentCyan else TextSubDark, modifier = Modifier.size(24.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            Text(device.name, color = TextTitleDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                            Text(if (isConn) "Active Connection" else device.address, color = if (isConn) AccentCyan else TextSubDark, fontSize = 13.sp)
+                                        }
+                                    }
+                                    if (isConn) {
+                                        Box(modifier = Modifier.size(28.dp).background(AccentCyan, CircleShape).shadow(8.dp, CircleShape, spotColor = AccentCyan), contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                        }
+                                    } else {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = TextSubDark, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                                if (index < savedDevices.size - 1) {
+                                    HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = GlassBorder, thickness = 1.dp)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(40.dp))
+                }
+            } // end LazyColumn
+                
+            // TOP BAR (GLASS EFFECT)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(Brush.verticalGradient(listOf(DarkBg.copy(alpha=0.9f), DarkBg.copy(alpha=0.6f), Color.Transparent)))
+            ) {
+                ModernTopBar(onOpenDrawer, isConnected, AccentCyan, onConnectClick = { if (isConnected) viewModel.disconnect() else onNavigateToPairing() })
+            }
+        }
+    }
+}
+
+// ── CUSTOM COMPONENTS ──
 
 @Composable
 fun BiDirectionalSwipeUnlock(
@@ -494,77 +494,58 @@ fun BiDirectionalSwipeUnlock(
     onSwipeLeft: () -> Unit
 ) {
     var offsetX by remember { mutableFloatStateOf(0f) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = offsetX, 
-        animationSpec = if (offsetX == 0f) spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow) else tween(0)
-    )
+    val animatedOffsetX by animateFloatAsState(targetValue = offsetX, animationSpec = if (offsetX == 0f) spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow) else tween(0), label = "swipe")
     val haptic = LocalHapticFeedback.current
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .shadow(16.dp, RoundedCornerShape(36.dp), spotColor = ShadowColor)
-            .clip(RoundedCornerShape(36.dp))
-            .background(SurfaceCard) // White background tile
-            .padding(8.dp)
+            .height(80.dp)
+            .shadow(16.dp, RoundedCornerShape(40.dp), spotColor = Color.Black)
+            .clip(RoundedCornerShape(40.dp))
+            .background(GlassSurface)
+            .border(1.dp, GlassBorder, RoundedCornerShape(40.dp))
+            .padding(10.dp)
     ) {
-        val maxDrag = with(LocalDensity.current) { 
-            (maxWidth.toPx() / 2f) - (56.dp.toPx() / 2f) - 8.dp.toPx() 
-        }
-        
-        // Calculate dynamic alpha for text fading
+        val maxDrag = with(LocalDensity.current) { (maxWidth.toPx() / 2f) - (60.dp.toPx() / 2f) - 10.dp.toPx() }
         val fadeThreshold = maxDrag * 0.4f
         val leftTextAlpha = if (offsetX > 0f) 0f else (1f - (Math.abs(offsetX) / fadeThreshold)).coerceIn(0f, 1f)
         val rightTextAlpha = if (offsetX < 0f) 0f else (1f - (Math.abs(offsetX) / fadeThreshold)).coerceIn(0f, 1f)
 
-        // Background text
+        // Background Text
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("← Wake", color = TextSub.copy(alpha = leftTextAlpha), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text("Direct →", color = TextSub.copy(alpha = rightTextAlpha), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("← Wake PC", color = TextSubDark.copy(alpha = leftTextAlpha), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("Direct Unlock →", color = TextSubDark.copy(alpha = rightTextAlpha), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
 
         // Draggable Thumb
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
                     .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
-                    .size(56.dp)
-                    .shadow(12.dp, CircleShape, spotColor = if (isConnected) primaryColor else Color.Gray)
-                    .background(if (isConnected) primaryColor else Color.Gray, CircleShape)
+                    .size(60.dp)
+                    .shadow(16.dp, CircleShape, spotColor = if (isConnected) primaryColor else Color.Black)
+                    .background(if (isConnected) primaryColor else Color(0xFF3F3F46), CircleShape)
                     .pointerInput(isConnected) {
                         if (!isConnected) return@pointerInput
-                        
                         detectHorizontalDragGestures(
                             onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
                             onDragEnd = {
-                                if (offsetX > maxDrag * 0.7f) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onSwipeRight()
-                                } else if (offsetX < -maxDrag * 0.7f) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onSwipeLeft()
-                                }
+                                if (offsetX > maxDrag * 0.7f) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onSwipeRight() }
+                                else if (offsetX < -maxDrag * 0.7f) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onSwipeLeft() }
                                 offsetX = 0f
                             },
                             onDragCancel = { offsetX = 0f },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                offsetX = (offsetX + dragAmount).coerceIn(-maxDrag, maxDrag)
-                            }
+                            onHorizontalDrag = { change, dragAmount -> change.consume(); offsetX = (offsetX + dragAmount).coerceIn(-maxDrag, maxDrag) }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.LockOpen, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.LockOpen, contentDescription = null, tint = if (isConnected) Color.Black else Color.White)
             }
         }
     }
@@ -573,123 +554,73 @@ fun BiDirectionalSwipeUnlock(
 @Composable
 fun VerticalMediaControlBar(modifier: Modifier, viewModel: CommLinkViewModel, primaryColor: Color) {
     val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                // Consume all leftover scroll so it never bubbles up to the parent LazyColumn
-                return available
-            }
-        }
+        object : NestedScrollConnection { override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = available }
     }
-
     Column(
         modifier = modifier
-            .height(200.dp) // Fixed height to enforce internal scrolling
-            .shadow(12.dp, RoundedCornerShape(BentoRadiusLg), spotColor = Color(0xFF0F172A).copy(alpha = 0.2f))
-            .background(Color(0xFF0F172A), RoundedCornerShape(BentoRadiusLg)) // Extremely dark pill for contrast
-            .padding(vertical = 12.dp)
+            .shadow(16.dp, RoundedCornerShape(BentoRadiusLg), spotColor = Color.Black)
+            .background(Color(0xFF000000).copy(alpha=0.6f), RoundedCornerShape(BentoRadiusLg))
+            .border(1.dp, GlassBorder, RoundedCornerShape(BentoRadiusLg))
+            .padding(vertical = 16.dp)
             .nestedScroll(nestedScrollConnection)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        IconButton(onClick = { viewModel.sendMediaVolumeUp() }) { 
-            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Vol+", tint = Color.White.copy(alpha = 0.8f)) 
-        }
-        IconButton(onClick = { viewModel.sendMediaPrev() }) { 
-            Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = Color.White.copy(alpha = 0.8f)) 
-        }
+        IconButton(onClick = { viewModel.sendMediaVolumeUp() }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Vol+", tint = TextTitleDark) }
+        IconButton(onClick = { viewModel.sendMediaPrev() }) { Icon(Icons.Default.SkipPrevious, contentDescription = "Prev", tint = TextTitleDark) }
         Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(primaryColor, CircleShape)
-                .clickable { viewModel.sendMediaPlayPause() },
+            modifier = Modifier.size(48.dp).background(primaryColor, CircleShape).shadow(12.dp, CircleShape, spotColor = primaryColor).clickable { viewModel.sendMediaPlayPause() },
             contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-        IconButton(onClick = { viewModel.sendMediaNext() }) { 
-            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Color.White.copy(alpha = 0.8f)) 
-        }
-        IconButton(onClick = { viewModel.sendMediaVolumeDown() }) { 
-            Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = "Vol-", tint = Color.White.copy(alpha = 0.8f)) 
-        }
-        IconButton(onClick = { viewModel.sendMediaMute() }) { 
-            Icon(Icons.Default.VolumeOff, contentDescription = "Mute", tint = Color.White.copy(alpha = 0.8f)) 
-        }
+        ) { Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(24.dp)) }
+        IconButton(onClick = { viewModel.sendMediaNext() }) { Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = TextTitleDark) }
+        IconButton(onClick = { viewModel.sendMediaVolumeDown() }) { Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = "Vol-", tint = TextTitleDark) }
     }
 }
 
 @Composable
 fun ModernTopBar(onOpenDrawer: () -> Unit, isConnected: Boolean, primaryColor: Color, onConnectClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(44.dp).background(SurfaceCard, CircleShape)
-                .shadow(4.dp, CircleShape, spotColor = ShadowColor)
-                .clickable { onOpenDrawer() }
-                .clip(CircleShape),
+            modifier = Modifier.size(48.dp).background(GlassSurface, CircleShape).border(1.dp, GlassBorder, CircleShape).clickable { onOpenDrawer() }.clip(CircleShape),
             contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.commvault_logo),
-                contentDescription = "Menu",
-                modifier = Modifier.fillMaxSize().padding(8.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
+        ) { Image(painter = painterResource(id = R.drawable.commvault_logo), contentDescription = "Menu", modifier = Modifier.fillMaxSize().padding(10.dp), contentScale = ContentScale.Fit) }
         
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("COMM", color = TextTitle, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Text("LINK", color = primaryColor, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("COMM", color = TextTitleDark, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+            Text("LINK", color = primaryColor, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
         }
         
         Box(
-            modifier = Modifier.size(44.dp).background(if (isConnected) primaryColor.copy(alpha = 0.15f) else SurfaceCard, CircleShape)
-                .shadow(if (isConnected) 0.dp else 4.dp, CircleShape, spotColor = ShadowColor)
-                .clickable { onConnectClick() }
-                .clip(CircleShape),
+            modifier = Modifier.size(48.dp).background(if (isConnected) primaryColor.copy(alpha=0.2f) else GlassSurface, CircleShape)
+                .border(1.dp, if (isConnected) primaryColor.copy(alpha=0.5f) else GlassBorder, CircleShape).clickable { onConnectClick() }.clip(CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 if (isConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth, 
-                contentDescription = "Bluetooth", 
-                tint = if (isConnected) primaryColor else TextSub,
-                modifier = Modifier.size(20.dp)
+                contentDescription = "Bluetooth", tint = if (isConnected) primaryColor else TextSubDark, modifier = Modifier.size(22.dp)
             )
         }
     }
 }
 
-
 @Composable
-fun BentoCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    icon: ImageVector,
-    primaryColor: Color,
-    accentColor: Color,
-    enabled: Boolean,
-    large: Boolean = false,
-    centerContent: Boolean = false,
-    onClick: () -> Unit
-) {
-    val bg = if (enabled) SurfaceCard else SurfaceCardLight
-    val contentColor = if (enabled) TextTitle else TextSub
+fun BentoCard(modifier: Modifier = Modifier, title: String, icon: ImageVector, primaryColor: Color, accentColor: Color, enabled: Boolean, large: Boolean = false, centerContent: Boolean = false, onClick: () -> Unit) {
+    val bg = if (enabled) GlassSurface else GlassSurface.copy(alpha=0.3f)
+    val contentColor = if (enabled) TextTitleDark else TextSubDark
     
     Box(
         modifier = modifier
-            .shadow(if (enabled) 12.dp else 2.dp, RoundedCornerShape(BentoRadiusLg), spotColor = ShadowColor)
+            .shadow(if (enabled) 16.dp else 0.dp, RoundedCornerShape(BentoRadiusLg), spotColor = Color.Black)
             .clip(RoundedCornerShape(BentoRadiusLg))
             .background(bg)
+            .border(1.dp, GlassBorder, RoundedCornerShape(BentoRadiusLg))
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(if (large) 20.dp else 16.dp)
+            .padding(if (large) 24.dp else 16.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(), 
@@ -697,44 +628,26 @@ fun BentoCard(
             horizontalAlignment = if (centerContent) Alignment.CenterHorizontally else Alignment.Start
         ) {
             Box(
-                modifier = Modifier
-                    .size(if (large) 56.dp else 40.dp)
-                    .background(
-                        if (enabled) Brush.linearGradient(listOf(accentColor, accentColor.copy(alpha = 0.7f))) 
-                        else Brush.linearGradient(listOf(Color.LightGray, Color.Gray)), 
-                        CircleShape
-                    ),
+                modifier = Modifier.size(if (large) 56.dp else 44.dp).background(if (enabled) accentColor.copy(alpha=0.15f) else Color.White.copy(alpha=0.05f), CircleShape).border(1.dp, if (enabled) accentColor.copy(alpha=0.4f) else Color.Transparent, CircleShape),
                 contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(if (large) 28.dp else 20.dp))
-            }
-            if (centerContent) Spacer(modifier = Modifier.height(12.dp))
+            ) { Icon(icon, contentDescription = null, tint = if(enabled) accentColor else TextSubDark, modifier = Modifier.size(if (large) 28.dp else 22.dp)) }
+            if (centerContent) Spacer(modifier = Modifier.height(16.dp))
             Text(
-                title, 
-                color = contentColor, 
-                fontSize = if (large) 20.sp else 14.sp, 
-                fontWeight = FontWeight.Black,
-                textAlign = if (centerContent) TextAlign.Center else TextAlign.Start,
-                lineHeight = if (large) 24.sp else 18.sp
+                title, color = contentColor, fontSize = if (large) 22.sp else 15.sp, 
+                fontWeight = FontWeight.Black, textAlign = if (centerContent) TextAlign.Center else TextAlign.Start, lineHeight = if (large) 26.sp else 20.sp
             )
         }
     }
 }
 
 @Composable
-fun ActionPill(title: String, icon: ImageVector, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+fun ActionPill(title: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(76.dp)) {
         Box(
-            modifier = Modifier
-                .size(64.dp)
-                .shadow(8.dp, CircleShape, spotColor = ShadowColor)
-                .background(SurfaceCard, CircleShape)
-                .clickable(onClick = onClick),
+            modifier = Modifier.size(64.dp).shadow(12.dp, CircleShape, spotColor = color.copy(alpha=0.5f)).background(GlassSurface, CircleShape).border(1.dp, color.copy(alpha=0.3f), CircleShape).clickable(onClick = onClick),
             contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = title, tint = TextTitle, modifier = Modifier.size(28.dp))
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(title, color = TextTitle, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        ) { Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(28.dp)) }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(title, color = TextTitleDark, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
